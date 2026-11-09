@@ -1,7 +1,7 @@
 # Qhub + SQL Server. Create deploy/secrets/* and .env first (README, "Run with Docker"); both are gitignored.
 services:
   sql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: ${QHUB_SQL_IMAGE:-mcr.microsoft.com/mssql/server:2022-latest}
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${QHUB_SQL_SA_PASSWORD:?set QHUB_SQL_SA_PASSWORD in .env}
@@ -14,6 +14,8 @@ services:
       start_period: 120s
 
   qhub:
+    # A server without the source sets QHUB_IMAGE and runs `docker compose pull && docker compose up -d --no-build`.
+    image: ${QHUB_IMAGE:-qhub-qhub:latest}
     build: .
     depends_on:
       sql:

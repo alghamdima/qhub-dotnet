@@ -63,6 +63,21 @@ docker compose up -d --build    # SQL Server + Qhub on http://localhost:8080
 
 If port 8080 is taken, set `QHUB_HOST_PORT=8090` (or another port) in `.env`. Sign in at `/login` as `admin` with the password in `deploy/secrets/admin_password`. For a real host, set `QHUB_PUBLIC_URL` to its `https://` address in `.env` and put a TLS proxy in front (add its address to `QHUB_TRUSTED_PROXIES`).
 
+### Deploy on a server from Docker Hub
+
+The server needs this repository (for `compose.yaml`, `deploy/` and `custom/`) but not the .NET SDK:
+
+```sh
+git clone -b dotnet https://github.com/alghamdima/qhub-dotnet.git && cd qhub-dotnet
+bash deploy/make-secrets.sh
+# in .env: QHUB_IMAGE=pdflab4/qhub:re261109, QHUB_PUBLIC_URL=https://<server>/, QHUB_HOST_PORT=...
+#          QHUB_SQL_IMAGE=<mirror>   only if `docker pull mcr.microsoft.com/mssql/server:2022-latest` fails there
+docker login                     # only for a private repository
+docker compose pull && docker compose up -d --no-build
+```
+
+The image is built and pushed from a machine with the SDK: `docker build -t pdflab4/qhub:<tag> . && docker push pdflab4/qhub:<tag>`. A SQL Server mirror must stay in a private repository (Microsoft's licence).
+
 ### Changing settings
 
 - **Where settings live:** every setting is a `QHUB_*` variable in `.env`; `.env.example` lists them all with defaults. Secrets go in `deploy/secrets/` and reach the app as Docker secrets (`QHUB_*_FILE`). The image holds no secrets or settings except `QHUB_PORT=8080` and `QHUB_DATA_DIR=/data`.

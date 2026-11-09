@@ -24,4 +24,8 @@ if new deploy/secrets/data_protection.pem; then
   cat deploy/secrets/dp.crt deploy/secrets/dp.key > deploy/secrets/data_protection.pem
   rm deploy/secrets/dp.key deploy/secrets/dp.crt
 fi
+# Compose mounts secret files with their host permissions and the app runs as the non-root user "app":
+# the files must be world-readable, and the 700 folder keeps other users of this machine out.
+chmod 700 deploy/secrets
+chmod 644 deploy/secrets/*
 echo "Admin password: deploy/secrets/admin_password"

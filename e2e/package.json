@@ -1,0 +1,11 @@
+{
+  "name": "qhub-e2e",
+  "private": true,
+  "description": "End-to-end scenario: drives a running Qhub in real Chrome (see SCENARIO.md).",
+  "scripts": {
+    "scenario": "node scenario.js"
+  },
+  "dependencies": {
+    "playwright-core": "^1.65.0"
+  }
+}

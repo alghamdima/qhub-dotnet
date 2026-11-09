@@ -1,0 +1,125 @@
+@page "/apiKeys"
+@model ApiKeysModel
+@using Qhub.Domain
+@* Legacy template html_api, markup unchanged; values in inline JS go through PageJs. *@
+@{
+    Layout = "_AdminLayout";
+    ViewData["ActiveView"] = 2;
+    ViewData["PageName"] = "ApiOverview";
+    var user = Model.ActiveUser;
+}
+<div class="row">
+    <div class="col">
+        <div id="container" class="card" style="width: 80%">
+            <div class="card-body">
+		<div class="container">
+		  <div class="row mb-4">
+		    <div class="col">
+		    </div>
+		    <div class="col text-center">
+		      <h3 class="card-title mb-0">API Keys</h3>
+		    </div>
+		    <div class="col text-end">
+		      <button id="button-newapi" class="btn btn-outline-light" onclick="newApiKey()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                </button>
+		    </div>
+		  </div>
+		</div>
+
+                Please visit the <a target="_blank" href="./apidocumentation">API documentation</a> for more information about the API.<br>Click on the API key name to give it a new name. Permissions can be changed by clicking on them.
+                <br>
+                <br>
+                <div class="table-responsive">
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th scope="col">Name</th>
+                                <th scope="col">API Key</th>
+                                <th scope="col">Last Used</th>
+            			<th scope="col">Permissions
+                                    <button type="button"
+                                        class="btn btn-sm btn-link text-white-50 p-0 ms-1 align-baseline"
+                                        id="apiPermLegendBtn"
+                                        data-bs-toggle="popover"
+                                        data-bs-placement="top"
+                                        data-bs-html="true"
+                                        data-bs-trigger="focus"
+                                        data-bs-content='
+                                            <table class="table table-sm table-dark mb-0" style="font-size:0.85em">
+                                              <tbody>
+                                                <tr><td><i class="bi bi-eye"></i></td><td>List uploads</td></tr>
+                                                <tr><td><i class="bi bi-file-earmark-plus"></i></td><td>Upload files</td></tr>
+                                                <tr><td><i class="bi bi-pencil"></i></td><td>Edit uploads</td></tr>
+                                                <tr><td><i class="bi bi-trash3"></i></td><td>Delete uploads</td></tr>
+                                                <tr><td><i class="bi bi-recycle"></i></td><td>Replace uploads</td></tr>
+                                                <tr><td><i class="bi bi-box-arrow-in-down"></i></td><td>Download files</td></tr>
+                                                <tr><td><i class="bi bi-people"></i></td><td>Manage users</td></tr>
+                                                <tr><td><i class="bi bi-card-list"></i></td><td>Manage system logs</td></tr>
+                                                <tr><td><i class="bi bi-sliders2"></i></td><td>Manage API keys</td></tr>
+                                              </tbody>
+                                            </table>'
+                                        title="Permission Legend"
+                                        tabindex="0"
+                                        aria-label="Show permission legend">
+                                        <i class="bi bi-question-circle"></i>
+                                    </button>
+                                </th>
+@if (Model.CanManageAll)
+{
+            			<th scope="col">User</th>
+}
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="apitable">
+@foreach (var row in Model.Keys)
+{
+    var k = row.Key;
+    var id = PageJs.Str(k.Id);
+                            <tr id="row-@k.Id">
+                                <td id="friendlyname-@k.Id" onClick="addFriendlyNameChange('@id')">@k.FriendlyName</td>
+                                <td><div class="font-monospace" title="The key is shown only once, when it is created">••••••••••••</div></td>
+            			<td><span id="cell-lastused-@k.Id"></span></td>
+				   <script>insertDateWithNegative(@(k.LastUsed?.ToUnixTimeSeconds() ?? 0), "cell-lastused-@id");</script>
+                                            <td class="prevent-select">
+						<i id="perm_view_@k.Id" class="bi bi-eye @row.State(ApiPermissions.View)" title="List Uploads" onclick='changeApiPermission("@id","PERM_VIEW", "perm_view_@id");'></i>
+						<i id="perm_upload_@k.Id" class="bi bi-file-earmark-plus @row.State(ApiPermissions.Upload)" title="Upload" onclick='changeApiPermission("@id","PERM_UPLOAD", "perm_upload_@id");'></i>
+						<i id="perm_edit_@k.Id" class="bi bi-pencil @row.State(ApiPermissions.Edit)" title="Edit Uploads" onclick='changeApiPermission("@id","PERM_EDIT", "perm_edit_@id");'></i>
+						<i id="perm_delete_@k.Id" class="bi bi-trash3 @row.State(ApiPermissions.Delete)" title="Delete Uploads" onclick='changeApiPermission("@id","PERM_DELETE", "perm_delete_@id");'></i>
+						<i id="perm_replace_@k.Id" class="bi bi-recycle @row.State(ApiPermissions.Replace, UserPermissions.Replace)" title="Replace Uploads" onclick='changeApiPermission("@id","PERM_REPLACE", "perm_replace_@id");'></i>
+						<i id="perm_download_@k.Id" class="bi bi-box-arrow-in-down @row.State(ApiPermissions.Download)" title="Download Files" onclick='changeApiPermission("@id","PERM_DOWNLOAD", "perm_download_@id");'></i>
+						<i id="perm_users_@k.Id" class="bi bi-people @row.State(ApiPermissions.ManageUsers, UserPermissions.Users)" title="Manage Users" onclick='changeApiPermission("@id","PERM_MANAGE_USERS", "perm_users_@id");'></i>
+						<i id="perm_logs_@k.Id" class="bi bi-card-list @row.State(ApiPermissions.ManageLogs, UserPermissions.Logs)" title="Manage System Logs" onclick='changeApiPermission("@id","PERM_MANAGE_LOGS", "perm_logs_@id");'></i>
+						<i id="perm_api_@k.Id" class="bi bi-sliders2 @row.State(ApiPermissions.ApiManage)" title="Manage API Keys" onclick='changeApiPermission("@id","PERM_API_MOD", "perm_api_@id");'></i>
+            				</td>
+    @if (Model.CanManageAll)
+    {
+            			 <td>@row.Owner.Name</td>
+    }
+                                <td><button id="delete-@k.Id" type="button" class="btn btn-outline-danger btn-sm" onclick="deleteApiKey('@id')" title="Delete"><i class="bi bi-trash3"></i></button></td>
+                            </tr>
+}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+	<div id="toastnotification" class="toastnotification" data-default="API key copied to clipboard">Toast Text</div>
+    </div>
+</div>
+<script src="./js/min/admin.min.qhubnet1.js"></script>
+<script>
+	var userName = "@PageJs.Str(user.Name)";
+        var canViewOtherApiKeys = @PageJs.Bool(Model.CanManageAll);
+        var canReplaceFiles = @PageJs.Bool(user.Permissions.HasFlag(UserPermissions.Replace));
+        var canManageUsers = @PageJs.Bool(user.Permissions.HasFlag(UserPermissions.Users));
+        var canViewSystemLog = @PageJs.Bool(user.Permissions.HasFlag(UserPermissions.Logs));
+
+	(function () {
+		var el = document.getElementById('apiPermLegendBtn');
+		if (el) {
+			new bootstrap.Popover(el, { sanitize: false });
+		}
+	})();
+</script>

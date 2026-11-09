@@ -1,0 +1,431 @@
+/*
+ * Deployment branding: a white page in place of Qhub's dark theme.
+ * Colours and fonts come from the company brand kit. The fonts are read only where they are
+ * installed (local()); never point these rules at a font file, the licences forbid serving them.
+ * After changing this file, raise the number in version.txt so browsers fetch the new one.
+ */
+@font-face { font-family: 'ALJUF Sans'; src: local('Karbon-Regular'); font-weight: 400; }
+@font-face { font-family: 'ALJUF Sans'; src: local('Karbon-Bold'); font-weight: 700; }
+@font-face { font-family: 'ALJUF Sans'; src: local('Luma-Regular'); font-weight: 400; unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+@font-face { font-family: 'ALJUF Sans'; src: local('Luma-SemiBold'); font-weight: 700; unicode-range: U+0600-06FF, U+0750-077F, U+0870-08FF, U+FB50-FDFF, U+FE70-FEFF; }
+
+:root {
+    --aljuf-purple-dark: #3C1053;
+    --aljuf-purple-dark-75: #6D4C7E;
+    --aljuf-purple-dark-50: #9E88A9;
+    --aljuf-purple-dark-25: #CEC3D4;
+    --aljuf-purple: #AC4FC6;
+    --aljuf-purple-25: #EAD3F1;
+    --aljuf-yellow: #FFCD00;
+    --aljuf-yellow-75: #FFDA40;
+    --aljuf-black: #1D1D1B;
+    --aljuf-slate: #5C6670;
+    --aljuf-slate-75: #858C94;
+    --aljuf-slate-50: #AEB3B8;
+    --aljuf-slate-25: #D6D9DB;
+    --aljuf-rule: #CEC3D4;
+    --aljuf-focus: 0 0 0 0.25rem rgba(60, 16, 83, 0.25);
+    /* the company's rounded pentagon (brand kit pentagon.svg), point up, 100:95 */
+    --aljuf-pentagon-purple: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 95'%3E%3Cpath fill='%23AC4FC6' d='M61,7.98 L89,28.3 Q100,36.28 95.8,49.2 L85.1,82.08 Q80.9,95 67.3,95 L32.7,95 Q19.1,95 14.9,82.08 L4.2,49.2 Q0,36.28 11,28.3 L39,7.98 Q50,0 61,7.98 Z'/%3E%3C/svg%3E");
+    --aljuf-pentagon-yellow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 95'%3E%3Cpath fill='%23FFCD00' d='M61,7.98 L89,28.3 Q100,36.28 95.8,49.2 L85.1,82.08 Q80.9,95 67.3,95 L32.7,95 Q19.1,95 14.9,82.08 L4.2,49.2 Q0,36.28 11,28.3 L39,7.98 Q50,0 61,7.98 Z'/%3E%3C/svg%3E");
+    --bs-body-font-family: 'ALJUF Sans', Arial, Helvetica, sans-serif;
+    accent-color: var(--aljuf-purple-dark);
+}
+
+/* Page: the templates hard-code a dark body, so the utility classes are turned around here */
+body {
+    background-image: none;
+}
+body::after {
+    display: none;
+}
+.bg-dark, .bg-black {
+    background-color: #fff !important;
+}
+.text-white, .text-light, .text-info {
+    color: var(--aljuf-black) !important;
+}
+.text-white-50, .text-muted {
+    color: var(--aljuf-slate) !important;
+}
+.text-warning {
+    color: var(--aljuf-purple-dark) !important;
+}
+.bg-danger.text-white {
+    color: #fff !important;
+}
+.bg-secondary {
+    background-color: var(--aljuf-slate) !important;
+}
+.bg-info {
+    background-color: var(--aljuf-purple-25) !important;
+}
+
+h1, h2, h3, h4, h5, h6, .card-title {
+    color: var(--aljuf-purple-dark);
+    font-weight: 700;
+}
+
+/* Header: a dark purple band with the white logo and two pentagons cropped at the corner, as on the
+   company's covers. The page's p-3 padding is cancelled so the band runs edge to edge. */
+header {
+    margin: -1rem -1rem 0;
+    padding: 1.25rem 1rem;
+    background:
+        var(--aljuf-pentagon-yellow) right 4.5rem bottom -2.5rem / 5rem no-repeat,
+        var(--aljuf-pentagon-purple) right -2.5rem top 0.75rem / 8rem no-repeat,
+        var(--aljuf-purple-dark);
+}
+@media (max-width: 575px) {
+    /* phones: one small pentagon, clear of the centred logo and the tabs */
+    header {
+        background: var(--aljuf-pentagon-purple) right -1.25rem top 0.75rem / 4.5rem no-repeat, var(--aljuf-purple-dark);
+    }
+}
+/* the logo stands in for the name, which stays in the page for screen readers */
+header h1 {
+    font-size: 0;
+}
+header h1::before {
+    content: "";
+    display: block;
+    height: 3rem;
+    margin: 0.5rem auto 1rem;
+    background: url("en-white.png") center / contain no-repeat;
+}
+.nav-masthead {
+    float: none;
+}
+.nav-masthead .nav-link {
+    color: var(--aljuf-purple-dark-25);
+}
+.nav-masthead .nav-link:hover,
+.nav-masthead .nav-link:focus {
+    color: #fff;
+    border-bottom-color: var(--aljuf-purple-dark-50);
+}
+.nav-masthead .active {
+    color: #fff;
+    border-bottom-color: var(--aljuf-yellow);
+}
+
+/* Title marker from the brand kit: a short yellow bar before each card title */
+.card-title:not(.filename-text)::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 0.85em;
+    margin-inline-end: 0.6rem;
+    background-color: var(--aljuf-yellow);
+}
+
+/* Tables: dark purple header row with white bold text */
+.table > thead th {
+    --bs-table-bg: var(--aljuf-purple-dark);
+    --bs-table-color: #fff;
+}
+
+/* "Powered by Qhub" is not for customers; hidden rather than removed so the page stays centred */
+footer {
+    visibility: hidden;
+}
+
+/* Surfaces */
+.card {
+    border-color: var(--aljuf-rule);
+}
+.card-body {
+    background-color: transparent;
+    color: var(--aljuf-black);
+}
+.qhub-dialog, .file-card, .stat-card, .upload-option-card, .upload-box, .uploads-container {
+    background-color: #fff;
+    color: var(--aljuf-black);
+}
+.file-card, .stat-card, .upload-option-card, .uploads-container {
+    border-color: var(--aljuf-rule);
+    box-shadow: none;
+}
+.shadow-sm, .shadow, .shadow-lg {
+    box-shadow: none !important;
+}
+/* without its shadow a borderless card would vanish into the white page */
+.card.border-0 {
+    border: 1px solid var(--aljuf-rule) !important;
+}
+.info-box, .highlighted-password {
+    background-color: var(--aljuf-purple-25);
+}
+.highlighted-password {
+    color: var(--aljuf-purple-dark);
+    border-color: var(--aljuf-rule);
+}
+.filelist-item:hover {
+    background-color: var(--aljuf-purple-25);
+}
+
+.table-dark {
+    --bs-table-color: var(--aljuf-black);
+    --bs-table-bg: #fff;
+    --bs-table-border-color: var(--aljuf-rule);
+    --bs-table-striped-color: var(--aljuf-black);
+    --bs-table-striped-bg: var(--aljuf-purple-25);
+    --bs-table-active-color: var(--aljuf-black);
+    --bs-table-active-bg: var(--aljuf-purple-25);
+    --bs-table-hover-color: var(--aljuf-black);
+    --bs-table-hover-bg: var(--aljuf-purple-25);
+}
+
+.dropdown-menu {
+    --bs-dropdown-bg: #fff;
+    --bs-dropdown-color: var(--aljuf-black);
+    --bs-dropdown-border-color: var(--aljuf-rule);
+    --bs-dropdown-divider-bg: var(--aljuf-rule);
+    --bs-dropdown-link-color: var(--aljuf-black);
+    --bs-dropdown-link-hover-color: var(--aljuf-black);
+    --bs-dropdown-link-hover-bg: var(--aljuf-purple-25);
+    --bs-dropdown-link-active-color: #fff;
+    --bs-dropdown-link-active-bg: var(--aljuf-purple-dark);
+}
+.popover {
+    --bs-popover-bg: #fff;
+    --bs-popover-header-bg: #fff;
+    --bs-popover-header-color: var(--aljuf-purple-dark);
+    --bs-popover-body-color: var(--aljuf-black);
+    --bs-popover-border-color: var(--aljuf-rule);
+    --bs-popover-arrow-border: var(--aljuf-rule);
+}
+.popover-header {
+    border-bottom-color: var(--aljuf-rule);
+}
+.pagination {
+    --bs-pagination-color: var(--aljuf-purple-dark);
+    --bs-pagination-active-bg: var(--aljuf-purple-dark);
+    --bs-pagination-active-border-color: var(--aljuf-purple-dark);
+}
+
+/* Buttons: dark purple, with yellow only for the customer's Download button.
+   The password page's Continue is its main action, so it looks like Login's button. */
+.btn-primary, .btn-light, .btn-outline-light[type="submit"] {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--aljuf-purple-dark);
+    --bs-btn-border-color: var(--aljuf-purple-dark);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--aljuf-purple-dark-75);
+    --bs-btn-hover-border-color: var(--aljuf-purple-dark-75);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--aljuf-purple-dark-75);
+    --bs-btn-active-border-color: var(--aljuf-purple-dark-75);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: var(--aljuf-purple-dark-50);
+    --bs-btn-disabled-border-color: var(--aljuf-purple-dark-50);
+    --bs-btn-focus-shadow-rgb: 60, 16, 83;
+}
+.btn-outline-light {
+    --bs-btn-color: var(--aljuf-purple-dark);
+    --bs-btn-border-color: var(--aljuf-purple-dark);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--aljuf-purple-dark);
+    --bs-btn-hover-border-color: var(--aljuf-purple-dark);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--aljuf-purple-dark);
+    --bs-btn-active-border-color: var(--aljuf-purple-dark);
+    --bs-btn-disabled-color: var(--aljuf-purple-dark-50);
+    --bs-btn-disabled-border-color: var(--aljuf-purple-dark-50);
+    --bs-btn-focus-shadow-rgb: 60, 16, 83;
+}
+.btn-outline-light[type="submit"] {
+    width: 100%;
+}
+.file-card .btn-primary {
+    --bs-btn-color: var(--aljuf-purple-dark);
+    --bs-btn-bg: var(--aljuf-yellow);
+    --bs-btn-border-color: var(--aljuf-yellow);
+    --bs-btn-hover-color: var(--aljuf-purple-dark);
+    --bs-btn-hover-bg: var(--aljuf-yellow-75);
+    --bs-btn-hover-border-color: var(--aljuf-yellow-75);
+    --bs-btn-active-color: var(--aljuf-purple-dark);
+    --bs-btn-active-bg: var(--aljuf-yellow-75);
+    --bs-btn-active-border-color: var(--aljuf-yellow-75);
+    --bs-btn-disabled-color: var(--aljuf-purple-dark);
+    --bs-btn-disabled-bg: var(--aljuf-yellow-75);
+    --bs-btn-disabled-border-color: var(--aljuf-yellow-75);
+}
+
+/* Form controls */
+.form-control:focus, .form-select:focus, .form-check-input:focus,
+.log-dark-input:focus {
+    border-color: var(--aljuf-purple-dark-50) !important;
+    box-shadow: var(--aljuf-focus);
+}
+.form-check-input:checked {
+    background-color: var(--aljuf-purple-dark);
+    border-color: var(--aljuf-purple-dark);
+}
+.form-control:disabled, .upload-option-card .form-control:disabled {
+    background-color: var(--aljuf-slate-25);
+    color: var(--aljuf-slate);
+}
+.upload-option-card .form-control, .upload-option-suffix,
+.log-dark-input, .log-dark-input:focus, .input-group-text-dark {
+    background-color: #fff !important;
+    border-color: var(--aljuf-rule) !important;
+    color: var(--aljuf-black) !important;
+}
+/* the arrow was invisible on the dark theme; now it shows, it needs its own room */
+.form-select.upload-option-suffix {
+    padding-right: 1.75rem;
+    background-position: right 0.4rem center;
+}
+.upload-option-card input[type="number"]::-webkit-inner-spin-button {
+    filter: none;
+}
+.upload-option-card:has(.upload-option-toggle:checked) {
+    border-color: var(--aljuf-purple-dark);
+    box-shadow: none;
+}
+.upload-option-icon {
+    color: var(--aljuf-purple);
+}
+.upload-option-label, .upload-options-section-label {
+    color: var(--aljuf-slate);
+}
+
+/* Drop area and upload progress */
+.upload-box {
+    border-color: var(--aljuf-purple-dark-50);
+}
+.upload-box:hover, .upload-box.highlight, .upload-box.dz-drag-hover {
+    border-color: var(--aljuf-purple-dark);
+    background-color: var(--aljuf-purple-25);
+}
+.upload-progress-bar, .progress-stat {
+    background-color: var(--aljuf-slate-25);
+}
+.upload-progress-bar-progress {
+    background-color: var(--aljuf-purple-dark);
+}
+
+/* Status page: load bars go dark purple, then purple, then yellow when high */
+.progress-stat {
+    --bs-progress-bar-bg: var(--aljuf-purple-dark);
+}
+.progress-stat .bg-success {
+    background-color: var(--aljuf-purple-dark) !important;
+}
+.progress-stat .bg-warning {
+    background-color: var(--aljuf-purple) !important;
+}
+.progress-stat .bg-danger {
+    background-color: var(--aljuf-yellow) !important;
+}
+.stat-card:hover {
+    border-color: var(--aljuf-purple-dark);
+    box-shadow: none !important;
+}
+#logviewer::-webkit-scrollbar-track {
+    background: var(--aljuf-slate-25);
+}
+#logviewer::-webkit-scrollbar-thumb {
+    background: var(--aljuf-slate-50);
+}
+
+/* Phones. The page's flex container must be allowed to shrink to the screen,
+   or a single wide card widens the whole page. */
+body > .flex-column {
+    min-width: 0;
+}
+/* a long file name with no space or hyphen would otherwise widen the card */
+.filename-text {
+    overflow-wrap: anywhere;
+}
+@media (max-width: 575.98px) {
+    /* cards fill the screen instead of the fixed desktop widths set inline in the templates */
+    main .card {
+        width: 100% !important;
+    }
+    /* content starts under the band instead of floating mid-screen */
+    header.mb-auto {
+        margin-bottom: 2rem !important;
+    }
+    .download-wrapper {
+        min-height: 0;
+        padding-top: 3rem !important;
+    }
+    .file-card .card-body {
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+    /* 44px touch targets */
+    .card .btn:not(.btn-sm), .card .form-control {
+        min-height: 44px;
+    }
+}
+
+/* Download page */
+/* pentagon badge on the card's top edge: pulled up by the card's 3rem padding plus half its height */
+.icon-container {
+    width: 76px;
+    height: 72px;
+    margin: calc(-3rem - 36px) auto 1.5rem;
+    padding-top: 6px;
+    border-radius: 0;
+    background-color: var(--aljuf-purple-dark);
+    color: #fff;
+    -webkit-mask: var(--aljuf-pentagon-purple) center / contain no-repeat;
+    mask: var(--aljuf-pentagon-purple) center / contain no-repeat;
+}
+.filename-text {
+    color: var(--aljuf-purple-dark);
+}
+.dark-list-item {
+    background-color: #fff !important;
+    border-color: var(--aljuf-rule) !important;
+    color: var(--aljuf-slate) !important;
+}
+
+/* API key and user permissions: granted dark purple, not granted pale slate */
+.perm-granted {
+    color: var(--aljuf-purple-dark);
+}
+.perm-notgranted, .perm-granted:not(.perm-nochange):hover {
+    color: var(--aljuf-slate-50);
+}
+.perm-notgranted:not(.perm-nochange):hover {
+    color: var(--aljuf-purple-dark);
+}
+.perm-unavailable {
+    color: var(--aljuf-slate-25);
+}
+.perm-processing {
+    color: var(--aljuf-purple);
+}
+@keyframes perm-nowgranted-pulse {
+    0%, 100% { transform: scale(1.15); color: var(--aljuf-purple-dark); }
+    50% { transform: scale(1.3); color: var(--aljuf-purple); }
+}
+@keyframes perm-nownotgranted-pulse {
+    0%, 100% { transform: scale(1.15); color: var(--aljuf-slate-50); }
+    50% { transform: scale(1.3); color: var(--aljuf-slate); }
+}
+
+/* Row highlights and notices */
+@keyframes subtleHighlight {
+    0% { background-color: var(--aljuf-purple-25); }
+    100% { background-color: transparent; }
+}
+@keyframes subtleHighlightNewJson {
+    0% { background-color: var(--aljuf-purple-25); }
+    100% { background-color: transparent; }
+}
+.toastnotification {
+    background-color: var(--aljuf-purple-dark);
+    box-shadow: none;
+}
+.toast-undo, .toast-undo:hover {
+    color: var(--aljuf-yellow);
+}
+.flatpickr-day.selected, .flatpickr-day.selected:hover {
+    background: var(--aljuf-purple-dark);
+    border-color: var(--aljuf-purple-dark);
+}

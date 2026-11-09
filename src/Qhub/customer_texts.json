@@ -1,0 +1,28 @@
+{
+  "en": {
+    "size": "Size",
+    "download": "Download",
+    "codeTitle": "Verify your identity",
+    "codePrompt": "Enter the last 4 digits of your ID number to open the document.",
+    "codePlaceholder": "Last 4 digits",
+    "codeSubmit": "Verify",
+    "codeWrong": "Incorrect code. Attempts left:",
+    "codeLocked": "This link is locked after 5 wrong attempts. Try again in 24 hours or contact the branch.",
+    "linkInvalidTitle": "Link not valid",
+    "linkInvalidText": "This link has expired or is no longer available. Please contact the branch for a new link.",
+    "unavailable": "Qhub is temporarily unavailable, please try again in a moment."
+  },
+  "ar": {
+    "size": "الحجم",
+    "download": "تحميل",
+    "codeTitle": "التحقق من الهوية",
+    "codePrompt": "أدخل آخر 4 أرقام من رقم الهوية لفتح المستند.",
+    "codePlaceholder": "آخر 4 أرقام",
+    "codeSubmit": "تحقق",
+    "codeWrong": "الرمز غير صحيح. المحاولات المتبقية:",
+    "codeLocked": "تم إيقاف هذا الرابط بعد 5 محاولات خاطئة. حاول مرة أخرى بعد 24 ساعة أو تواصل مع الفرع.",
+    "linkInvalidTitle": "الرابط غير صالح",
+    "linkInvalidText": "انتهت صلاحية هذا الرابط أو لم يعد متاحاً. يرجى التواصل مع الفرع للحصول على رابط جديد.",
+    "unavailable": "الخدمة غير متاحة مؤقتاً، حاول مرة أخرى بعد قليل."
+  }
+}

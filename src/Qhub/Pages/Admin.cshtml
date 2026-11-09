@@ -1,0 +1,302 @@
+@page "/admin"
+@model AdminModel
+@using Qhub.Domain
+@* Legacy template html_admin, markup unchanged; values in inline JS go through PageJs. *@
+@{
+    Layout = "_AdminLayout";
+    ViewData["ActiveView"] = 0;
+    ViewData["PageName"] = "Admin";
+    var user = Model.ActiveUser;
+}
+      <div class="row">
+        <div class="col">
+		<div id="container" class="card" style="width: 80%">
+		  <div class="card-body">
+		    <h3 class="card-title">Upload</h3>
+		    <br>
+		    <p class="card-text">
+
+			<form action="./uploadChunk" class="dropzone upload-box text-center w-100" id="uploaddropzone">
+				<div class="dz-message">
+				    <p id="uploadBoxTitle" class="mb-2 fs-5">Drag & drop files here</p>
+				    <p id="uploadBoxSubtitle" class="mb-0 opacity-75">or paste or click to select.</p>
+				</div>
+			</form>
+
+		<div id="uploadstatus" class="container uploads-container">
+		</div>
+		<p></p>
+
+		<br>
+		<div class="upload-options-grid">
+
+
+		  <div class="upload-option-card">
+		    <div class="upload-option-header">
+		      <div class="d-flex align-items-center gap-2">
+		        <i class="bi bi-arrow-down-circle upload-option-icon"></i>
+		        <span class="upload-option-label">Download Limit</span>
+		      </div>
+		      <div class="form-check form-switch mb-0">
+		        <input class="form-check-input upload-option-toggle" type="checkbox" role="switch"
+		               name="enableDownloadLimit" id="enableDownloadLimit"
+		               onchange="checkBoxChanged(this, 'allowedDownloads')" checked
+		               aria-label="Enable Download Limit">
+		      </div>
+		    </div>
+		    <div class="input-group upload-option-input-group">
+		      <input type="number" class="form-control admin-input" value="1"
+		             name="allowedDownloads" id="allowedDownloads" min="1"
+		             style="text-align: right;" data-allow-regular-paste>
+		      <span class="input-group-text upload-option-suffix">Downloads</span>
+		    </div>
+		  </div>
+
+		  <div class="upload-option-card">
+		    <div class="upload-option-header">
+		      <div class="d-flex align-items-center gap-2">
+		        <i class="bi bi-calendar-x upload-option-icon"></i>
+		        <span class="upload-option-label">Expiry</span>
+		      </div>
+		      <div class="form-check form-switch mb-0">
+		        <input class="form-check-input upload-option-toggle" type="checkbox" role="switch"
+		               name="enableTimeLimit" id="enableTimeLimit"
+		               onchange="checkBoxChanged(this, 'expiryDays'); checkBoxChanged(this, 'expiryUnit')" checked
+		               aria-label="Enable Time Limit">
+		      </div>
+		    </div>
+		    <div class="input-group upload-option-input-group">
+		      <input type="number" class="form-control admin-input" value="14"
+		             name="expiryDays" id="expiryDays" min="1" max="100000"
+		             style="text-align: right;" data-allow-regular-paste>
+		      <!-- Option values are minutes per unit -->
+		      <select class="form-select upload-option-suffix" id="expiryUnit" aria-label="Expiry unit" style="flex: 0 0 auto; width: auto;">
+		        <option value="1440">Days</option>
+		        <option value="60">Hours</option>
+		        <option value="1">Minutes</option>
+		      </select>
+		    </div>
+		  </div>
+
+		  <div class="upload-option-card">
+		    <div class="upload-option-header">
+		      <div class="d-flex align-items-center gap-2">
+		        <i class="bi bi-key upload-option-icon"></i>
+		        <span class="upload-option-label">Password (required)</span>
+		      </div>
+		      <div class="form-check form-switch mb-0">
+		        <input class="form-check-input upload-option-toggle" type="checkbox" role="switch"
+		               name="enablePassword" id="enablePassword"
+		               onchange="checkBoxChanged(this, 'password')"
+		               aria-label="Enable Password Protection">
+		      </div>
+		    </div>
+		    <input class="form-control admin-input upload-option-input-group" value=""
+		           name="password" id="password" placeholder="Required: the customer's code" disabled
+		           data-allow-regular-paste>
+		  </div>
+
+		</div>
+<div id="errordiv" class="alert alert-danger" style="display:none">
+  <span id="errormessage" ></span>
+</div>
+		<br><br>
+@if (Model.IsFileListTruncated)
+{
+		<p class="text-secondary">Showing the newest 1000 files. Older files keep working with their links.</p>
+}
+		<div class="table-responsive">
+			<table id="maintable" class="table table-dark">
+				<thead>
+					<tr>
+						<th scope="col" style="text-align: center;">Filename</th>
+						<th scope="col" style="text-align: center;">Size</th>
+						<th scope="col" style="text-align: center;">Downloads remaining</th>
+						<th scope="col" style="text-align: center;">Stored until</th>
+						<th scope="col" style="text-align: center;">Downloads</th>
+						<th scope="col" style="text-align: center;">ID</th>
+						<th scope="col" style="text-align: center; min-width:13em;">Actions</th>
+					</tr>
+				</thead>
+				<tbody id="downloadtable">
+@foreach (var item in Model.Items.Where(i => !i.IsPendingDeletion && (i.ExpireAt > Model.TimeNow || i.UnlimitedTime) && (i.DownloadsRemaining > 0 || i.UnlimitedDownloads)))
+{
+    var own = user.Id == item.UploaderId;
+					<tr id="row-@item.Id">
+						<td id="cell-name-@item.Id">@item.Name</td>
+						<td data-order="@item.SizeBytes">@item.Size</td>
+    @if (item.UnlimitedDownloads)
+    {
+						<td>Unlimited</td>
+    }
+    else
+    {
+						<td id="cell-downloadsRemaining-@item.Id">@item.DownloadsRemaining</td>
+    }
+    @if (item.UnlimitedTime)
+    {
+						<td>Unlimited</td>
+    }
+    else
+    {
+						<td><span id="cell-expireatstring-@item.Id"></span></td>
+						 <script>insertFormattedDate(@item.ExpireAt, "cell-expireatstring-@PageJs.Str(item.Id)");</script>
+    }
+						<td id="cell-downloads-@item.Id">@item.DownloadCount</td>
+						<td><a id="url-href-@item.Id" target="_blank" href="@item.UrlDownload">@item.Id</a>@if (item.IsPasswordProtected) {<text>  <i title="Password protected" class="bi bi-key"></i></text>}</td>
+						<td>
+						<div class="btn-toolbar justify-content-end" role="toolbar" >
+						  <div class="btn-group me-2" role="group">
+		    <button id="url-button-@item.Id" type="button" onclick="showToast(1000)"
+		    	data-clipboard-text="@item.UrlDownload" class="copyurl btn btn-outline-light btn-sm" title="Copy URL"><i class="bi bi-copy"></i> URL</button>
+		    <button type="button" class="btn btn-outline-light btn-sm" title="Share" onclick="shareUrl(event, '@PageJs.Str(item.Id)',
+		       '@PageJs.Str(item.UrlDownload)')">
+		       <!-- For some reason bi-share does not always show up, using the svg fixes it -->
+		       	<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi" viewBox="0 0 16 16">
+ 				 <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5m-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3"/>
+			</svg>
+</button>
+		    <button type="button" id="shareDropdown-@item.Id" class="btn btn-outline-light btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+		    </button>
+			<ul class="dropdown-menu dropdown-menu-end" data-bs-theme="dark" >
+			    <li style="cursor: pointer;"><a class="dropdown-item" id="qrcode-@item.Id" title="Open QR Code" onclick="showQrCode('@PageJs.Str(item.Id)');"><i class="bi bi-qr-code"></i> QR Code</a></li>
+			    <li style="cursor: pointer;"><a class="dropdown-item" id="email-@item.Id" href="mailto:?body=@Uri.EscapeDataString(item.UrlDownload)"
+			       target="_blank" title="Share via email"><i class="bi bi-envelope"></i> Email</a></li>
+			</ul>
+						  </div>
+						  <div class="btn-group" role="group">
+			<button
+			    type="button"
+			    title="Download"
+			    class="btn btn-outline-light btn-sm"
+			    onclick="downloadFileWithPresign('@PageJs.Str(item.Id)');">
+		   	    <i class="bi bi-download"></i>
+			</button>
+			<button
+			    type="button"
+			    title="Edit"
+			    disabled="@(!own && !Model.Has(UserPermissions.Edit))"
+			    class="btn btn-outline-light btn-sm"
+			    onclick="showEditModal('@PageJs.Str(item.Name)',
+			    	'@PageJs.Str(item.Id)', @item.DownloadsRemaining,
+			    	 @item.ExpireAt, @PageJs.Bool(item.IsPasswordProtected),
+			    	 @PageJs.Bool(item.UnlimitedDownloads), @PageJs.Bool(item.UnlimitedTime),
+			    	 @PageJs.Bool((own && Model.Has(UserPermissions.Replace)) || Model.Has(UserPermissions.ReplaceOther)));">
+		   	    <i class="bi bi-pencil"></i>
+			</button>
+			<button id="button-delete-@item.Id"
+			   type="button"
+			   title="Delete"
+			   disabled="@(!own && !Model.Has(UserPermissions.Delete))"
+			   class="btn btn-outline-danger btn-sm"
+			   onclick="deleteFile('@PageJs.Str(item.Id)')">
+			   <i class="bi bi-trash3"></i>
+			</button>
+						 </div>
+						</div></td>
+					</tr>
+}
+				</tbody>
+			</table>
+		      </div>
+		  </div>
+		</div>
+	    </div>
+   	 </div>
+
+	<div class="modal fade" id="modaledit" tabindex="-1" aria-labelledby="m_filenamelabel" aria-hidden="true">
+	  <div class="modal-dialog  modal-lg qhub-dialog">
+	    <div class="modal-content qhub-dialog">
+	      <div class="modal-header">
+		<h1 class="modal-title fs-5" id="m_filenamelabel">Filename</h1>
+	      </div>
+	      <div class="modal-body">
+		<div class="input-group mb-3">
+		  <div class="input-group-text">
+      			<input type="checkbox" id="mc_download"  checked aria-label="Limit downloads" title="Limit downloads"  data-toggle-target="mi_edit_down" onchange="handleEditCheckboxChange(this)">
+   		 </div>
+		  <span class="input-group-text modal-samesize-input-edit" id="edit_down">Limit Downloads</span>
+		  <input type="number" min="1" id="mi_edit_down" class="form-control" aria-label="Downloads Remaining" aria-describedby="edit_down" data-allow-regular-paste>
+		</div>
+		<div class="input-group mb-3">
+		  <div class="input-group-text">
+      			<input id="mc_expiry" type="checkbox" checked aria-label="Expire files" title="Expire files"  data-toggle-target="mi_edit_expiry" onchange="handleEditCheckboxChange(this)" >
+   		 </div>
+		  <span class="input-group-text modal-samesize-input-edit" id="edit_expdate">Expiry</span>
+		  <input type="datetime-local" id="mi_edit_expiry" class="form-control" aria-label="Expiry" aria-describedby="edit_expdate"  data-allow-regular-paste>
+		</div>
+		<div class="input-group mb-3">
+		  <div class="input-group-text">
+      			<input type="checkbox" id="mc_password" aria-label="Require password" title="Require password" data-toggle-target="mi_edit_pw" onchange="handleEditCheckboxChange(this)">
+   		 </div>
+		  <span class="input-group-text modal-samesize-input-edit" id="edit_pw">Password</span>
+		  <input type="text" id="mi_edit_pw" class="form-control" aria-label="Password" disabled aria-describedby="edit_pw"  data-allow-regular-paste>
+		</div>
+
+	      <div class="input-group mb-3" id="replaceGroup">
+		  <div class="input-group-text">
+		    <input type="checkbox" id="mc_replace" aria-label="Replace file content" title="Replace file content" data-toggle-target="mi_edit_replace" onchange="handleEditCheckboxChange(this)">
+		  </div>
+		  <span class="input-group-text modal-samesize-input-edit" id="edit_replace">Replace Content</span>
+		  <select id="mi_edit_replace" class="form-select" aria-label="Replace File Content" disabled>
+		  </select>
+		</div>
+	      </div>
+	      <div class="modal-footer">
+		<button type="button" class="btn btn-outline-light"  aria-label="Close" data-bs-dismiss="modal">Close</button>
+		<button type="button" class="btn btn-primary" data-fileid="" id="mb_save" onclick="editFile();">Save changes</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+
+
+	<div id="toastnotification" class="toastnotification" data-default="URL copied to clipboard">Toast Text</div>
+	<div id="toastnotificationUndo" class="toastnotification">
+	  File deleted: <span id="toastFilename"></span>
+  	   <span id="toastUndoButton" class="toast-undo" onclick="handleUndo(this)">Restore</span>
+	</div>
+	<div id="qroverlay">
+	  <div id="qrcode"></div>
+	</div>
+
+	<script src="./js/min/admin.min.qhubnet1.js"></script>
+	<script>
+
+	initDropzone();
+
+	Dropzone.options.uploaddropzone["maxFilesize"] = @Model.Settings.MaxFileSizeMb;
+	Dropzone.options.uploaddropzone["timeout"] = 1200000;
+	Dropzone.options.uploaddropzone["chunking"] = true;
+	Dropzone.options.uploaddropzone["chunkSize"] = @Model.Settings.ChunkSizeMb * 1024 * 1024;
+	Dropzone.options.uploaddropzone["parallelUploads"] = 1;
+	Dropzone.options.uploaddropzone["parallelChunkUploads"] = @Model.Settings.MaxParallelUploads;
+	Dropzone.options.uploaddropzone["forceChunking"] = true;
+	Dropzone.options.uploaddropzone["retryChunksLimit"] = 3;
+	Dropzone.options.uploaddropzone["retryChunks"] = true;
+	Dropzone.options.uploaddropzone["previewsContainer"] = false;
+	// Dropzone 6 no longer attaches itself on page load
+	Dropzone.discover();
+
+	new DataTable('#maintable', {
+	    "order": [], // disables initial sorting
+	    "columnDefs": [ {
+		"targets": 6,
+		"orderable": false
+		} ],
+	    "paging": false,
+	    "language": {
+	      "info": "Files stored: _TOTAL_",
+	      "emptyTable": "No files stored yet",
+	      "infoEmpty": "",
+	    }
+	});
+
+	registerChangeHandler();
+
+	var canReplaceOwnFiles = @PageJs.Bool(Model.Has(UserPermissions.Replace));
+	setUploadDefaults();
+
+
+	</script>
+        <script src="./js/min/uuid.min.js"></script>

@@ -1,0 +1,48 @@
+@* Legacy templates html_header + html_footer (public views), markup unchanged. *@
+@inject Qhub.Features.Branding.Branding Branding
+<!doctype html>
+<html lang="en" dir="ltr" class="h-100">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+
+	<script src="./assets/dist/js/bootstrap.bundle.min.js"></script>
+	<link href="./assets/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link rel="apple-touch-icon" sizes="180x180" href="./favicon-apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+	<link rel="manifest" href="./site.webmanifest">
+        <link href="./css/min/qhub.min.35a46a442d.css" rel="stylesheet">
+	<link href="./assets/dist/icons/bootstrap-icons.min.css" rel="stylesheet">
+	<script src="./js/min/all_public.min.js"></script>
+@RenderSection("Head", required: false)
+@if (Branding.HasCss)
+{
+         <link  href="./custom/custom.v@(Branding.Version).css" rel="stylesheet">
+}
+  </head>
+  <body class="d-flex h-100 text-center text-white bg-dark">
+  <div class="d-flex w-100 h-100 p-3 mx-auto flex-column">
+  <header class="mb-auto">
+    <div>
+      <h1><a href="/index" style="text-decoration: none;display: block;">@ViewData["PublicName"]</a></h1>
+    </div>
+  </header>
+  <main>
+@RenderBody()
+  <script>
+  	var pageName = "@ViewData["PageName"]";
+  </script>
+@if (Branding.HasPublicJs)
+{
+	<script src="./custom/public.v@(Branding.Version).js"></script>
+}
+  </main>
+
+  <footer class="mt-auto text-white-50">
+          <p> Powered by Qhub </p>
+  </footer>
+</div>
+  </body>
+</html>

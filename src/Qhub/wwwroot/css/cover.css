@@ -1,0 +1,711 @@
+/*
+ * Globals
+ */
+
+/* Custom default button */
+.btn-secondary,
+.btn-secondary:hover,
+.btn-secondary:focus {
+    color: #333;
+    text-shadow: none;
+    /* Prevent inheritance from `body` */
+}
+
+/*
+ * Base structure
+ */
+
+body {
+    background: url("../../assets/background.jpg") no-repeat center center fixed;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    display: -ms-flexbox;
+    display: -webkit-box;
+    display: flex;
+    -ms-flex-pack: center;
+    -webkit-box-pack: center;
+    justify-content: center;
+}
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* This creates the inset border effect */
+    box-shadow: inset 0 0 5rem rgba(0, 0, 0, 0.5);
+    /* Essential: allows clicking buttons/inputs through the shadow */
+    pointer-events: none; 
+    /* Ensures it stays above the background but below modals if needed */
+    z-index: 10; 
+}
+
+td {
+    vertical-align: middle;
+    position: relative;
+}
+
+a {
+    color: inherit;
+}
+
+a:hover {
+    color: inherit;
+    filter: brightness(80%);
+}
+
+
+.text-muted {
+    color: #adb5bd !important; 
+}
+
+
+.card {
+    margin: 0 auto;
+    float: none;
+    margin-bottom: 10px;
+    border: 2px solid rgb(51, 57, 63);
+}
+
+.card-body {
+    background-color: rgb(33, 37, 41);
+    color: #ddd;
+}
+
+.card-title {
+    font-weight: 900;
+}
+
+.admin-input {
+    text-align: center;
+}
+
+.form-control:disabled {
+    background: #bababa;
+}
+
+.break {
+    flex-basis: 100%;
+    height: 0;
+}
+
+.bd-placeholder-img {
+    font-size: 1.125rem;
+    text-anchor: middle;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
+}
+
+@media (min-width: 768px) {
+    .bd-placeholder-img-lg {
+        font-size: 3.5rem;
+    }
+
+    .break {
+        flex-basis: 0%;
+    }
+}
+
+/*
+ * Header
+ */
+
+.masthead {
+    margin-bottom: 2rem;
+}
+
+.masthead-brand {
+    margin-bottom: 0;
+}
+
+.nav-masthead .nav-link {
+    padding: 0.25rem 0;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    background-color: transparent;
+    border-bottom: 0.25rem solid transparent;
+}
+
+.nav-masthead .nav-link:hover,
+.nav-masthead .nav-link:focus {
+    border-bottom-color: rgba(255, 255, 255, 0.25);
+}
+
+.nav-masthead .nav-link+.nav-link {
+    margin-left: 1rem;
+}
+
+.nav-masthead .active {
+    color: #fff;
+    border-bottom-color: #fff;
+}
+
+
+#qroverlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+#qrcode {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -105px;
+    margin-left: -105px;
+    width: 210px;
+    height: 210px;
+    border: 5px solid #ffffff;
+}
+
+.toastnotification {
+    pointer-events: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    z-index: 9999;
+}
+
+.toastnotification.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.toast-undo {
+    margin-left: 20px;
+    color: #4FC3F7;
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: bold;
+    pointer-events: auto;
+}
+
+.toast-undo:hover {
+    color: #81D4FA;
+}
+
+.toastnotification:not(.show) {
+    pointer-events: none !important;
+}
+
+.toastnotification:not(.show) .toast-undo {
+    pointer-events: none;
+}
+
+.perm-granted {
+    cursor: pointer;
+    color: #0edf00;
+}
+
+.perm-notgranted {
+    cursor: pointer;
+    color: #9f9999;
+}
+
+.perm-unavailable {
+    color: #525252;
+}
+
+.perm-processing {
+    pointer-events: none;
+    color: #e5eb00;
+    animation: perm-pulse 1s infinite;
+}
+
+.perm-nochange {
+    cursor: default;
+}
+
+
+.perm-granted:not(.perm-nochange):hover {
+    color: #ff4d4d;
+}
+
+.perm-notgranted:not(.perm-nochange):hover {
+    color: #4dff4d;
+}
+
+.perm-granted:not(.perm-nochange),
+.perm-notgranted:not(.perm-nochange) {
+    transition: color 0.15s ease, transform 0.1s ease;
+}
+
+@keyframes perm-pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.perm-nochange:hover {
+    transform: none;
+}
+
+.perm-nowgranted {
+    animation: perm-nowgranted-pulse 0.5s ease forwards;
+}
+
+@keyframes perm-nowgranted-pulse {
+    0% {
+        transform: scale(1.15);
+        color: #4dff4d;
+    }
+
+    50% {
+        transform: scale(1.3);
+        color: #008800;
+    }
+
+    100% {
+        transform: scale(1.15);
+        color: #0edf00;
+    }
+}
+
+.perm-nownotgranted {
+    animation: perm-nownotgranted-pulse 0.5s ease forwards;
+}
+
+@keyframes perm-nownotgranted-pulse {
+    0% {
+        transform: scale(1.15);
+        color: #ff4d4d;
+    }
+
+    50% {
+        transform: scale(1.3);
+        color: #ff0000;
+    }
+
+    100% {
+        transform: scale(1.15);
+        color: ##9f9999;
+    }
+}
+
+.prevent-select {
+    -webkit-user-select: none;
+    /* Safari */
+    -ms-user-select: none;
+    /* IE 10 and IE 11 */
+    user-select: none;
+    /* Standard syntax */
+}
+
+
+.qhub-dialog {
+    background-color: #212529;
+    color: #ddd;
+}
+
+
+/* Define a subtle animation */
+@keyframes subtleHighlight {
+    0% {
+        background-color: #444950;
+        /* Light gray for dark background */
+    }
+
+    100% {
+        background-color: transparent;
+        /* Original background */
+    }
+}
+
+
+@keyframes subtleHighlightNewJson {
+    0% {
+        background-color: green;
+        /* Pale green for new items */
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Apply the animation to the updated table cells */
+.updatedDownloadCount {
+    animation: subtleHighlight 0.5s ease-out;
+}
+
+
+.newApiKey {
+    animation: subtleHighlightNewJson 0.7s ease-out;
+}
+
+.newUser {
+    animation: subtleHighlightNewJson 0.7s ease-out;
+}
+
+.newItem {
+    animation: subtleHighlightNewJson 1.5s ease-out;
+}
+
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+
+.rowDeleting {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+
+.highlighted-password {
+    background-color: #444;
+    /* Dark gray background for subtle contrast */
+    color: #ddd;
+    /* Light gray text */
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-family: monospace;
+    display: inline-block;
+    /* Keeps the styling inline but ensures proper padding */
+    margin-left: 8px;
+    /* Adds space between the label and the password */
+    border: 1px solid #555;
+    /* Slight border to define the element */
+}
+
+/* Slightly lighter than table-dark */
+.filelist-item {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.filelist-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+
+tr.no-bottom-border td {
+    border-bottom: none
+}
+
+.collapse-toggle i {
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.collapse-toggle[aria-expanded="true"] i {
+    transform: rotate(180deg);
+}
+
+.collapse-toggle:hover {
+    opacity: 0.8;
+}
+
+.collapse-toggle {
+    padding: 0.25rem;
+}
+
+.remove-entry-btn:hover {
+    opacity: 0.8;
+}
+
+
+
+
+.info-box {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.info-box h6 {
+    margin-bottom: 0.5rem;
+}
+
+.info-box ul {
+    margin-bottom: 0;
+    padding-left: 1.2rem;
+}
+
+.callout {
+    padding: 20px;
+    margin: 10px 20px;
+    border: 1px solid #eee;
+    border-left-width: 5px;
+    border-radius: 3px;
+
+    h4 {
+        margin-top: 0;
+        margin-bottom: 5px;
+    }
+
+    p:last-child {
+        margin-bottom: 0;
+    }
+
+    code {
+        border-radius: 3px;
+    }
+
+    &+.bs-callout {
+        margin-top: -5px;
+    }
+}
+
+.upload-box {
+    background: #212529;
+    border: 2px dashed rgba(255, 255, 255, 0.2); 
+    border-radius: 8px ; 
+    padding: 2rem; 
+    transition: all 0.2s ease; 
+    cursor: pointer; 
+    display: block; 
+    transition: background-color 0.2s ease; 
+}
+
+.upload-box.highlight, .upload-box.dz-drag-hover{
+    border-color: #0d6efd; 
+    background-color: rgba(13, 110, 253, 0.05); 
+}
+
+
+
+.upload-box:hover {
+    background-color: rgba(255, 255, 255, 0.05); 
+}
+
+
+
+
+    .stat-card {
+        background: #1a1d20;
+        border: 1px solid #2d3238;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.3) !important;
+        border-color: #0d6efd;
+    }
+    .stat-icon {
+        opacity: 0.6;
+        font-size: 1.2rem;
+    }
+    .progress-stat {
+        height: 4px;
+        background-color: #2b3035;
+    }
+    
+    .log-dark-input {
+        background-color: #2b3035 !important;
+        border-color: #444b52 !important;
+        color: #e9ecef !important;
+    }
+    .log-dark-input:focus {
+        background-color: #32383e !important;
+        border-color: #0d6efd !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    .input-group-text-dark {
+        background-color: #1a1d20 !important;
+        border-color: #444b52 !important;
+        color: #adb5bd !important;
+    }
+    #logviewer::-webkit-scrollbar { width: 8px; }
+    #logviewer::-webkit-scrollbar-track { background: #000; }
+    #logviewer::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    
+    
+       .download-wrapper {
+        min-height: 70vh; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .file-card {
+        border: 1px solid #333;
+        border-radius: 1rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        /* Removed the transform/hover effect */
+        max-width: 450px;
+        width: 100%;
+        background: #1e1e1e; 
+        color: #e0e0e0;
+    }
+    .icon-container {
+        width: 70px;
+        height: 70px;
+        background-color: #2d2d2d;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem auto;
+        color: #0d6efd;
+    }
+    .filename-text {
+        word-wrap: break-word;
+        color: #ffffff;
+        font-weight: 600;
+    }
+    .dark-list-item {
+        background-color: #252525 !important;
+        border-color: #333 !important;
+        color: #b0b0b0 !important;
+    }
+    
+    
+.popover {
+    --bs-popover-bg: #212529;
+    --bs-popover-header-bg: #212529;
+    --bs-popover-header-color: #dee2e6;
+    --bs-popover-body-color: #dee2e6;
+    --bs-popover-body-padding-y: 0;
+    --bs-popover-border-color: rgba(255, 255, 255, 0.15);
+    --bs-popover-arrow-border: rgba(255, 255, 255, 0.15);
+}
+
+.popover-header {
+    border-bottom-color: rgba(255, 255, 255, 0.15);
+}
+
+
+
+
+/* ── Upload option cards ─────────────────────────────────────────── */
+
+.upload-options-section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.upload-options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+@media (max-width: 767px) {
+    .upload-options-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.upload-option-card {
+    background-color: #212529;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.upload-option-card:has(.upload-option-toggle:checked) {
+    border-color: rgba(13, 110, 253, 0.5);
+    box-shadow: 0 0 0 1px rgba(13, 110, 253, 0.2);
+}
+
+.upload-option-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+}
+
+.upload-option-icon {
+    font-size: 0.85rem;
+    color: #6ea8fe;
+    opacity: 0.9;
+}
+
+.upload-option-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #adb5bd;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.upload-option-toggle {
+    cursor: pointer;
+}
+
+.upload-option-input-group {
+    margin-top: 0;
+}
+
+.upload-option-card .form-control {
+    background-color: #2b3035;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #dee2e6;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.upload-option-card .form-control:disabled {
+    background-color: #262a2e;
+    color: #555;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.upload-option-suffix {
+    background-color: #2b3035;
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #adb5bd;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* ── Number input spinner color (Chrome/Edge) ───────────────────── */
+
+.upload-option-card input[type="number"]::-webkit-inner-spin-button {
+    filter: invert(1) brightness(0.6);
+}
+
+
+.modal-samesize-input-edit {
+   width: 11rem;
+}
+
+/* DataTables 3 right-aligns number and date columns; the file table keeps every column aligned like the rest */
+#maintable .dt-type-numeric,
+#maintable .dt-type-date {
+    text-align: start;
+}
+
+#maintable .dt-type-numeric div.dt-column-header,
+#maintable .dt-type-date div.dt-column-header {
+    flex-direction: row;
+}

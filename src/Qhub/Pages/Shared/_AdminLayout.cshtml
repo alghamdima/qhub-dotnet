@@ -1,0 +1,90 @@
+@* Legacy templates html_header + html_footer (admin view), markup unchanged. *@
+@using Qhub.Domain
+@using Qhub.Features.Identity
+@inject Qhub.Features.Branding.Branding Branding
+@inject Microsoft.Extensions.Options.IOptions<Qhub.Configuration.QhubOptions> Options
+@{
+    var user = Context.CurrentUser()!;
+    var activeView = (int)(ViewData["ActiveView"] ?? -1);
+    var isAdmin = user.Rank is UserRank.SuperAdmin or UserRank.Admin;
+    var showApiMenu = !Options.Value.DisableApiMenu || isAdmin;
+}
+<!doctype html>
+<html lang="en" dir="ltr" class="h-100">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+
+	<script src="./assets/dist/js/bootstrap.bundle.min.js"></script>
+	<link href="./assets/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link rel="apple-touch-icon" sizes="180x180" href="./favicon-apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
+	<link rel="manifest" href="./site.webmanifest">
+        <link href="./css/min/qhub.min.35a46a442d.css" rel="stylesheet">
+	<link href="./assets/dist/icons/bootstrap-icons.min.css" rel="stylesheet">
+	<script src="./js/min/all_public.min.js"></script>
+        <title>@Options.Value.PublicName Admin</title>
+	<script src="./assets/dist/js/dropzone.min.js?v=35a46a442d"></script>
+	<script src="./assets/dist/js/datatables.min.js"></script>
+	<link  href="./assets/dist/css/dropzone.min.v2.css" rel="stylesheet">
+	<link  href="./assets/dist/css/datatables.min.css" rel="stylesheet">
+	<style>
+		.masthead-brand {
+			float: left;
+		}
+		.nav-masthead {
+			float: right;
+		}
+	</style>
+@if (Branding.HasCss)
+{
+	<link  href="./custom/custom.v@(Branding.Version).css" rel="stylesheet">
+}
+  </head>
+  <body class="d-flex h-100 text-center text-white bg-dark">
+<div style="position:fixed;top:0.5rem;right:0.75rem;z-index:9999;">
+  <span class="badge bg-secondary opacity-75">
+    <i class="bi bi-person-fill"></i> @user.Name
+  </span>
+</div>
+  <div class="d-flex w-100 h-100 p-3 mx-auto flex-column">
+      <header class="masthead mb-auto">
+        <div  style="max-width: 80em;  margin: 0 auto;"  class="inner">
+          <h1>@Options.Value.PublicName</h1>
+          <nav class="nav nav-masthead justify-content-center">
+            <a class="nav-link @(activeView == 0 ? "active" : "")" href="./admin">Upload</a>
+@if (user.Permissions.HasFlag(UserPermissions.Users))
+{
+            <a class="nav-link @(activeView == 3 ? "active" : "")" href="./users">Users</a>
+}
+@if (showApiMenu)
+{
+            <a class="nav-link @(activeView == 2 ? "active" : "")" href="./apiKeys">API</a>
+}
+@if (user.Permissions.HasFlag(UserPermissions.Logs))
+{
+            <a class="nav-link @(activeView == 1 ? "active" : "")" href="./logs">Status</a>
+}
+            <a class="nav-link" href="#" onclick="doLogout()">Logout</a>
+          </nav>
+        </div>
+      </header>
+  <main style="margin-top: 2rem">
+@RenderBody()
+  <script>
+  	var pageName = "@ViewData["PageName"]";
+  </script>
+@if (Branding.HasAdminJs)
+{
+	<script src="./custom/admin.v@(Branding.Version).js"></script>
+}
+  </main>
+
+  <footer class="mt-auto text-white-50">
+          <p> Powered by Qhub v2.1.1</p>
+  </footer>
+</div>
+  </body>
+</html>

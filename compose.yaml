@@ -1,0 +1,57 @@
+# Qhub + SQL Server. Create deploy/secrets/* and .env first (README, "Run with Docker"); both are gitignored.
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${QHUB_SQL_SA_PASSWORD:?set QHUB_SQL_SA_PASSWORD in .env}
+    volumes:
+      - sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b -o /dev/null"]
+      interval: 10s
+      retries: 12
+      start_period: 120s
+
+  qhub:
+    build: .
+    depends_on:
+      sql:
+        condition: service_healthy
+    ports:
+      - "${QHUB_HOST_PORT:-8080}:8080"
+    # Every QHUB_* setting in .env reaches the app (see .env.example); the entries below take precedence.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      QHUB_PUBLIC_URL: ${QHUB_PUBLIC_URL:-http://localhost:${QHUB_HOST_PORT:-8080}/}
+      QHUB_ADMIN_USER: ${QHUB_ADMIN_USER:-admin}
+      QHUB_DB_CONNECTION_FILE: /run/secrets/qhub_db_connection
+      QHUB_SERVER_KEY_FILE: /run/secrets/qhub_server_key
+      QHUB_ADMIN_PASSWORD_FILE: /run/secrets/qhub_admin_password
+      QHUB_DATA_PROTECTION_CERT_FILE: /run/secrets/qhub_data_protection_pem
+    secrets:
+      - qhub_db_connection
+      - qhub_server_key
+      - qhub_admin_password
+      - qhub_data_protection_pem
+    volumes:
+      - qhub-data:/data
+      # Branding: custom.css, admin.js, public.js, favicon.png and the logo (read at start)
+      - ./custom:/app/custom:ro
+    restart: unless-stopped
+
+secrets:
+  qhub_db_connection:
+    file: deploy/secrets/db_connection
+  qhub_server_key:
+    file: deploy/secrets/server_key
+  qhub_admin_password:
+    file: deploy/secrets/admin_password
+  qhub_data_protection_pem:
+    file: deploy/secrets/data_protection.pem
+
+volumes:
+  sql-data:
+  qhub-data:

@@ -1,0 +1,976 @@
+// This file contains JS code for the API view
+// All files named admin_*.js will be merged together and minimised by calling
+// go generate ./...
+
+
+var dropzoneObject;
+
+var isUploading = false;
+
+var rowCount = -1;
+
+
+function initDropzone() {
+
+    Dropzone.options.uploaddropzone = {
+        paramName: "file",
+        dictDefaultMessage: "",
+        createImageThumbnails: false,
+        // The customer code is required (brief Q6): the last 4 digits of the customer's ID.
+        accept: function(file, done) {
+            if (!/^[0-9]{4}$/.test(document.getElementById("password").value)) {
+                done("Enter the customer's code (the last 4 digits of the ID) before uploading.");
+                return;
+            }
+            done();
+        },
+        chunksUploaded: function(file, done) {
+            sendChunkComplete(file, done);
+        },
+        init: function() {
+            dropzoneObject = this;
+            this.on("addedfile", file => {
+                file.upload.uuid = getUuid();
+                saveUploadDefaults();
+                addFileProgress(file);
+            });
+            this.on("queuecomplete", function() {
+                isUploading = false;
+            });
+            this.on("sending", function(file, xhr, formData) {
+                isUploading = true;
+            });
+
+            // Error handling for chunk upload, especially returning 413 error code (invalid nginx configuration)
+            this.on("error", function(file, errorMessage, xhr) {
+                console.log(errorMessage);
+                if (xhr) {
+                    if (xhr.status === 413) {
+                        showError(file, "File too large to upload. If you are using a reverse proxy, make sure that the allowed body size is at least 70MB.");
+                        return;
+                    }
+                    try {
+                        console.log(xhr);
+                        errInfo = JSON.parse(xhr.responseText);
+                        showError(file, "Error: " + errInfo.ErrorMessage);
+                    } catch (ignored) {
+                        showError(file, "Error: " + xhr.responseText);
+                    }
+                } else {
+                    showError(file, "Error: " + errorMessage);
+                }
+            });
+            this.on("uploadprogress", function(file, progress, bytesSent) {
+                updateProgressbar(file, progress, bytesSent);
+            });
+        },
+    };
+
+
+    document.onpaste = function(event) {
+        if (dropzoneObject.disabled) {
+            return;
+        }
+        const activeElement = document.activeElement;
+        // disable upload on paste if edit field with data-allow-regular-paste is selected or the calendar view (with placeholder attribute)
+        if (activeElement && (activeElement.hasAttribute('data-allow-regular-paste') || activeElement.hasAttribute('placeholder'))) {
+            return;
+        }
+
+        var items = (event.clipboardData || event.originalEvent.clipboardData).items;
+        for (let index in items) {
+            var item = items[index];
+            if (item.kind === 'file') {
+                dropzoneObject.addFile(item.getAsFile());
+            }
+            if (item.kind === 'string') {
+                item.getAsString(function(s) {
+                    // If a picture was copied from a website, the origin information might be submitted, which is filtered with this regex out
+                    const pattern = /<img *.+>/gi;
+                    if (pattern.test(s) === false) {
+                        let blob = new Blob([s], {
+                            type: 'text/plain'
+                        });
+                        let file = new File([blob], "Pasted Text.txt", {
+                            type: "text/plain",
+                            lastModified: new Date(0)
+                        });
+                        dropzoneObject.addFile(file);
+                    }
+                });
+            }
+        }
+    };
+
+    window.addEventListener('beforeunload', (event) => {
+        if (isUploading) {
+            event.returnValue = 'Upload is still in progress. Do you want to close this page?';
+        }
+    });
+}
+
+
+function updateProgressbar(file, progress, bytesSent) {
+    let chunkId = file.upload.uuid;
+    let container = document.getElementById(`us-container-${chunkId}`);
+    if (container == null || container.getAttribute('data-complete') === "true") {
+        return;
+    }
+    let rounded = Math.round(progress);
+    if (rounded < 0) {
+        rounded = 0;
+    }
+    if (rounded > 100) {
+        rounded = 100;
+    }
+    let millisSinceUpload = Date.now() - container.getAttribute('data-starttime');
+    let megabytePerSecond = bytesSent / (millisSinceUpload / 1000) / 1024 / 1024;
+    document.getElementById(`us-progressbar-${chunkId}`).style.width = rounded + "%";
+
+    let uploadSpeed = Math.round(megabytePerSecond * 10) / 10;
+    if (!Number.isNaN(uploadSpeed))
+        document.getElementById(`us-progress-info-${chunkId}`).innerText = rounded + "% - " + uploadSpeed + "MB/s";
+}
+
+function addFileProgress(file) {
+    addFileStatus(file.upload.uuid, file.upload.filename);
+}
+
+
+function setUploadDefaults() {
+    let defaultDownloads = getLocalStorageWithDefault("defaultDownloads", 1);
+    let defaultExpiry = getLocalStorageWithDefault("defaultExpiry", 14);
+    localStorage.removeItem("defaultPassword"); // the code is never kept in the browser (brief Q6)
+    let defaultUnlimitedDownloads = getLocalStorageWithDefault("defaultUnlimitedDownloads", false) === "true";
+    let defaultUnlimitedTime = getLocalStorageWithDefault("defaultUnlimitedTime", false) === "true";
+
+    document.getElementById("allowedDownloads").value = defaultDownloads;
+    document.getElementById("expiryDays").value = defaultExpiry;
+    document.getElementById("expiryUnit").value = getLocalStorageWithDefault("defaultExpiryUnit", "1440");
+    document.getElementById("password").value = "";
+    document.getElementById("enableDownloadLimit").checked = !defaultUnlimitedDownloads;
+    document.getElementById("enableTimeLimit").checked = !defaultUnlimitedTime;
+
+    document.getElementById("enablePassword").checked = true;
+    document.getElementById("enablePassword").disabled = true;
+    document.getElementById("password").disabled = false;
+    document.getElementById("password").required = true;
+
+    if (defaultUnlimitedDownloads) {
+        document.getElementById("allowedDownloads").disabled = true;
+    }
+    if (defaultUnlimitedTime) {
+        document.getElementById("expiryDays").disabled = true;
+        document.getElementById("expiryUnit").disabled = true;
+    }
+
+}
+
+function saveUploadDefaults() {
+    localStorage.setItem("defaultDownloads", document.getElementById("allowedDownloads").value);
+    localStorage.setItem("defaultExpiry", document.getElementById("expiryDays").value);
+    localStorage.setItem("defaultExpiryUnit", document.getElementById("expiryUnit").value);
+    localStorage.setItem("defaultUnlimitedDownloads", !document.getElementById("enableDownloadLimit").checked);
+    localStorage.setItem("defaultUnlimitedTime", !document.getElementById("enableTimeLimit").checked);
+}
+
+function getLocalStorageWithDefault(key, default_value) {
+    var value = localStorage.getItem(key);
+    if (value === null) {
+        return default_value;
+    }
+    return value;
+}
+
+function sendChunkComplete(file, done) {
+    let uuid = file.upload.uuid;
+    let filename = file.name;
+    let filesize = file.size;
+    let contenttype = file.type;
+    let allowedDownloads = document.getElementById("allowedDownloads").value;
+    let expiryDays = document.getElementById("expiryDays").value;
+    let expiryUnit = document.getElementById("expiryUnit").value;
+    let expiryMinutes = "";
+    let password = document.getElementById("password").value;
+    let nonblocking = true;
+
+    if (!document.getElementById("enableDownloadLimit").checked) {
+        allowedDownloads = 0;
+    }
+    if (!document.getElementById("enableTimeLimit").checked) {
+        expiryDays = 0;
+    } else if (expiryUnit !== "1440") {
+        expiryMinutes = expiryDays * expiryUnit;
+    }
+
+    apiChunkComplete(uuid, filename, filesize, contenttype, allowedDownloads, expiryDays, expiryMinutes, password, nonblocking)
+        .then(data => {
+            done();
+            let progressText = document.getElementById(`us-progress-info-${file.upload.uuid}`);
+            if (progressText != null)
+                progressText.innerText = "In Queue...";
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            dropzoneUploadError(file, "Upload failed. Details are in the browser console.");
+        });
+}
+
+function dropzoneUploadError(file, errormessage) {
+    file.accepted = false;
+    dropzoneObject._errorProcessing([file], errormessage);
+    showError(file, errormessage);
+}
+
+function dropzoneGetFile(uid) {
+    for (let i = 0; i < dropzoneObject.files.length; i++) {
+        const currentFile = dropzoneObject.files[i];
+        if (currentFile.upload.uuid === uid) {
+            return currentFile;
+        }
+    }
+    return null;
+}
+
+function requestFileInfo(fileId, uid) {
+    apiFilesListById(fileId)
+        .then(data => {
+            addRow(data);
+            notifyWorker({ type: "fileAdded", item: data });
+            removeFileStatus(uid);
+        })
+        .catch(error => {
+            let file = dropzoneGetFile(uid);
+            if (file != null) {
+                dropzoneUploadError(file, "Upload failed. Details are in the browser console.");
+            }
+            console.error('Error:', error);
+        });
+}
+
+
+function parseProgressStatus(eventData) {
+    let container = document.getElementById(`us-container-${eventData.chunk_id}`);
+    if (container == null) {
+        return;
+    }
+    container.setAttribute('data-complete', 'true');
+    let text;
+    switch (eventData.upload_status) {
+        case 0:
+            text = "Processing file...";
+            break;
+        case 1:
+            text = "Saving file...";
+            break;
+        case 2:
+            text = "Finalising...";
+            requestFileInfo(eventData.file_id, eventData.chunk_id);
+            break;
+        case 3:
+            text = "Error";
+            let file = dropzoneGetFile(eventData.chunk_id);
+            if (eventData.error_message == "")
+                eventData.error_message = "Server Error";
+            if (file != null) {
+                dropzoneUploadError(file, eventData.error_message);
+            }
+            return;
+        default:
+            text = "Unknown status";
+            break;
+    }
+    document.getElementById(`us-progress-info-${eventData.chunk_id}`).innerText = text;
+}
+
+function showError(file, message) {
+    let chunkId = file.upload.uuid;
+    document.getElementById(`us-progressbar-${chunkId}`).style.width = "100%";
+    document.getElementById(`us-progressbar-${chunkId}`).style.backgroundColor = "red";
+    document.getElementById(`us-progress-info-${chunkId}`).innerText = message;
+    document.getElementById(`us-progress-info-${chunkId}`).classList.add('uploaderror');
+}
+
+
+function editFile() {
+    const button = document.getElementById('mb_save');
+    button.disabled = true;
+    let id = button.getAttribute('data-fileid');
+
+    let allowedDownloads = document.getElementById('mi_edit_down').value;
+    let expiryTimestamp = localInputToUnix(document.getElementById('mi_edit_expiry').value);
+    const pwInput = document.getElementById('mi_edit_pw');
+    const requirePassword = document.getElementById('mc_password').checked;
+    // An empty field keeps the existing password (its placeholder reads "(unchanged)"), unticking removes it
+    const originalPassword = requirePassword && pwInput.value === '' && pwInput.dataset.hasPassword === 'true';
+    const newPassword = requirePassword ? pwInput.value : '';
+
+    if (!document.getElementById('mc_download').checked) {
+        allowedDownloads = 0;
+    }
+    if (!document.getElementById('mc_expiry').checked) {
+        expiryTimestamp = 0;
+    }
+
+    let replaceFile = false;
+    let replaceId = "";
+    if (document.getElementById('mc_replace').checked) {
+        replaceId = document.getElementById('mi_edit_replace').value;
+        replaceFile = (replaceId != "");
+    }
+
+    apiFilesModify(id, allowedDownloads, expiryTimestamp, newPassword, originalPassword)
+        .then(data => {
+            if (!replaceFile) {
+                location.reload();
+                return;
+            }
+            apiFilesReplace(id, replaceId)
+                .then(data => {
+                    location.reload();
+                })
+                .catch(error => {
+                    alert("Unable to edit file. Details are in the browser console.");
+                    console.error('Error:', error);
+                    button.disabled = false;
+                });
+        })
+        .catch(error => {
+            alert("Unable to edit file. Details are in the browser console.");
+            console.error('Error:', error);
+            button.disabled = false;
+        });
+}
+
+function showEditModal(filename, id, downloads, expiry, password, unlimitedown, unlimitedtime, canReplace) {
+    resetModalOnHide('modaledit');
+
+    document.getElementById("m_filenamelabel").innerText = filename;
+    document.getElementById("mb_save").setAttribute('data-fileid', id);
+    createCalendar("mi_edit_expiry", expiry);
+
+    if (unlimitedown) {
+        document.getElementById("mi_edit_down").value = "1";
+        document.getElementById("mi_edit_down").disabled = true;
+        document.getElementById("mc_download").checked = false;
+    } else {
+        document.getElementById("mi_edit_down").value = downloads;
+        document.getElementById("mi_edit_down").disabled = false;
+        document.getElementById("mc_download").checked = true;
+    }
+
+    if (unlimitedtime) {
+        document.getElementById("mi_edit_expiry").value = unixToLocalInput(add14DaysIfBeforeCurrentTime(expiry));
+        document.getElementById("mi_edit_expiry").disabled = true;
+        document.getElementById("mc_expiry").checked = false;
+    } else {
+        document.getElementById("mi_edit_expiry").value = unixToLocalInput(expiry);
+        document.getElementById("mi_edit_expiry").disabled = false;
+        document.getElementById("mc_expiry").checked = true;
+    }
+
+    const pwInput = document.getElementById("mi_edit_pw");
+    pwInput.value = "";
+    pwInput.placeholder = password ? "(unchanged)" : "";
+    pwInput.dataset.hasPassword = password ? "true" : "false";
+    pwInput.disabled = !password;
+    document.getElementById("mc_password").checked = !!password;
+
+    let selectReplace = document.getElementById("mi_edit_replace");
+    if (canReplace) {
+        document.getElementById("replaceGroup").style.display = 'flex';
+        let files = getAllAvailableFiles();
+        for (let i = 0; i < files[0].length; i++) {
+            if (files[0][i] == id)
+                continue;
+            selectReplace.add(new Option(files[1][i] + " (" + files[0][i] + ")", files[0][i]));
+        }
+    } else {
+        document.getElementById("replaceGroup").style.display = 'none';
+    }
+
+
+
+    new bootstrap.Modal('#modaledit', {}).show();
+}
+
+
+function add14DaysIfBeforeCurrentTime(unixTimestamp) {
+    let currentTime = Date.now();
+    let timestampInMilliseconds = unixTimestamp * 1000;
+    if (timestampInMilliseconds < currentTime) {
+        let newTimestamp = currentTime + (14 * 24 * 60 * 60 * 1000);
+        return Math.floor(newTimestamp / 1000);
+    } else {
+        return unixTimestamp;
+    }
+}
+
+function getAllAvailableFiles() {
+    let ids = [];
+    let filenames = [];
+
+    let elements = document.querySelectorAll('[id^="cell-name-"]');
+    for (let element of elements) {
+        ids.push(element.id.replace("cell-name-", ""));
+        filenames.push(element.innerHTML);
+    }
+    return [ids, filenames];
+}
+
+
+function deleteFile(id) {
+    document.getElementById("button-delete-" + id).disabled = true;
+    apiFilesDelete(id, 10)
+        .then(data => {
+            changeRowCount(false, document.getElementById("row-" + id));
+            showToastFileDeletion(id);
+            notifyWorker({ type: "fileDeleted", id: id });
+        })
+        .catch(error => {
+            alert("Unable to delete file. Details are in the browser console.");
+            console.error('Error:', error);
+        });
+}
+
+
+function checkBoxChanged(checkBox, correspondingInput) {
+    let disable = !checkBox.checked;
+
+    if (disable) {
+        document.getElementById(correspondingInput).setAttribute("disabled", "");
+    } else {
+        document.getElementById(correspondingInput).removeAttribute("disabled");
+    }
+    if (correspondingInput === "password" && disable) {
+        document.getElementById("password").value = "";
+    }
+}
+
+function parseSseData(data) {
+    let eventData;
+    try {
+        eventData = JSON.parse(data);
+    } catch (e) {
+        console.error("Failed to parse event data:", e);
+        return;
+    }
+    switch (eventData.event) {
+        case "download":
+            setNewDownloadCount(eventData.file_id, eventData.download_count, eventData.downloads_remaining);
+            return;
+        case "uploadStatus":
+            parseProgressStatus(eventData);
+            return;
+        default:
+            console.error("Unknown event", eventData);
+    }
+}
+
+function setNewDownloadCount(id, downloadCount, downloadsRemaining) {
+    let downloadCell = document.getElementById("cell-downloads-" + id);
+    if (downloadCell != null) {
+        downloadCell.innerText = downloadCount;
+        downloadCell.classList.add("updatedDownloadCount");
+        setTimeout(() => downloadCell.classList.remove("updatedDownloadCount"), 500);
+    }
+    if (downloadsRemaining != -1) {
+        let downloadsRemainingCell = document.getElementById("cell-downloadsRemaining-" + id);
+        if (downloadsRemainingCell != null) {
+            downloadsRemainingCell.innerText = downloadsRemaining;
+            downloadsRemainingCell.classList.add("updatedDownloadCount");
+            setTimeout(() => downloadsRemainingCell.classList.remove("updatedDownloadCount"), 500);
+        }
+    }
+}
+
+
+/**
+ * sseWorkerPort holds the active SharedWorker MessagePort so that sseLogout()
+ * in admin_ui_allPages.js can send a "close" message before navigating away.
+ * Null when running in direct-EventSource fallback mode.
+ */
+var sseWorkerPort = null;
+
+/**
+ * notifyWorker posts a message to the SharedWorker if one is active.
+ * The worker will relay it to all other connected tabs.
+ * Safe to call in fallback (direct SSE) mode — it's a no-op when the port is null.
+ * @param {Object} msg
+ */
+function notifyWorker(msg) {
+    if (sseWorkerPort !== null) {
+        sseWorkerPort.postMessage(msg);
+    }
+}
+
+/**
+ * registerChangeHandler
+ *
+ * Uses a SharedWorker to hold a single SSE connection that is shared across
+ * all open tabs. This prevents hitting the browser's per-origin HTTP/1.1
+ * connection limit (typically 6), which would otherwise block new tabs from
+ * receiving updates when many admin pages are open simultaneously.
+ *
+ * Falls back to a direct EventSource when SharedWorker is unavailable
+ * (e.g. Firefox private-browsing mode, or very old browsers).
+ */
+function registerChangeHandler() {
+    if (typeof SharedWorker !== "undefined") {
+        try {
+            const worker = new SharedWorker("./js/sse-worker.js");
+
+            worker.port.onmessage = (event) => {
+                if (event.data.type === "message") {
+                    parseSseData(event.data.data);
+                } else if (event.data.type === "error") {
+                    console.error("SSE worker connection error:", event.data.detail);
+                } else if (event.data.type === "shutdown") {
+                    // Another tab logged out — the session is gone for everyone.
+                    setTimeout(function() {  
+                   	 window.location.href = "./login";
+		     }, 1000);
+                } else if (event.data.type === "fileAdded") {
+                    // Another tab finished an upload or restored a file — add the
+                    // row if it isn't already present (guard against duplicate IDs).
+                    if (document.getElementById("row-" + sanitizeId(event.data.item.Id)) == null) {
+                        addRow(event.data.item);
+                    }
+                } else if (event.data.type === "fileDeleted") {
+                    // Another tab deleted a file — remove the row silently (no toast,
+                    // since this tab didn't initiate the deletion).
+                    let row = document.getElementById("row-" + sanitizeId(event.data.id));
+                    if (row != null) {
+                        changeRowCount(false, row);
+                    }
+                } else if (event.data.type === "log") {
+                    const { level, message, detail } = event.data;
+                    if (detail) {
+                        console[level](message, detail);
+                    } else {
+                        console[level](message);
+                    }
+                }
+            };
+
+            worker.onerror = (err) => {
+                // Worker itself failed to load – fall back to a direct connection.
+                console.warn("SharedWorker failed, falling back to direct SSE:", err);
+                sseWorkerPort = null;
+                _registerDirectSSE();
+            };
+
+            worker.port.start();
+            sseWorkerPort = worker.port;
+            return;
+        } catch (e) {
+            console.warn("SharedWorker unavailable, falling back to direct SSE:", e);
+        }
+    }
+    _registerDirectSSE();
+}
+
+/**
+ * _registerDirectSSE
+ *
+ * Fallback: open an EventSource directly in this tab. Used when SharedWorker
+ * is not supported or fails to load. Each tab will hold its own connection,
+ * which may hit browser connection limits if many tabs are open.
+ */
+function _registerDirectSSE() {
+    const source = new EventSource("./uploadStatus");
+    source.onmessage = (event) => {
+        parseSseData(event.data);
+    };
+    source.onerror = (error) => {
+        // Check for net::ERR_HTTP2_PROTOCOL_ERROR 200 (OK) and ignore it
+        if (error.target.readyState !== EventSource.CLOSED) {
+            source.close();
+        }
+        console.log("Reconnecting to SSE (direct)...");
+        setTimeout(_registerDirectSSE, 5000);
+    };
+}
+
+var statusItemCount = 0;
+
+
+function addFileStatus(chunkId, filename) {
+    const container = document.createElement('div');
+    container.setAttribute('id', `us-container-${chunkId}`);
+    container.classList.add('us-container');
+
+    // create filename div
+    const filenameDiv = document.createElement('div');
+    filenameDiv.classList.add('filename');
+    filenameDiv.textContent = filename;
+    container.appendChild(filenameDiv);
+
+    // create progress bar container div
+    const progressContainerDiv = document.createElement('div');
+    progressContainerDiv.classList.add('upload-progress-container');
+    progressContainerDiv.setAttribute('id', `us-progress-container-${chunkId}`);
+
+    // create progress bar div
+    const progressBarDiv = document.createElement('div');
+    progressBarDiv.classList.add('upload-progress-bar');
+
+    // create progress bar progress div
+    const progressBarProgressDiv = document.createElement('div');
+    progressBarProgressDiv.setAttribute('id', `us-progressbar-${chunkId}`);
+    progressBarProgressDiv.classList.add('upload-progress-bar-progress');
+    progressBarProgressDiv.style.width = '0%';
+    progressBarDiv.appendChild(progressBarProgressDiv);
+
+    // create progress info div
+    const progressInfoDiv = document.createElement('div');
+    progressInfoDiv.setAttribute('id', `us-progress-info-${chunkId}`);
+    progressInfoDiv.classList.add('upload-progress-info');
+    progressInfoDiv.textContent = '0%';
+
+    // append progress bar and progress info to progress bar container
+    progressContainerDiv.appendChild(progressBarDiv);
+    progressContainerDiv.appendChild(progressInfoDiv);
+
+    // append progress bar container to container
+    container.appendChild(progressContainerDiv);
+
+    container.setAttribute('data-starttime', Date.now());
+    container.setAttribute('data-complete', "false");
+
+    const uploadstatusContainer = document.getElementById("uploadstatus");
+    uploadstatusContainer.appendChild(container);
+    uploadstatusContainer.style.visibility = "visible";
+    statusItemCount++;
+}
+
+function removeFileStatus(chunkId) {
+    const container = document.getElementById(`us-container-${chunkId}`);
+    if (container == null) {
+        return;
+    }
+    container.remove();
+    statusItemCount--;
+    if (statusItemCount < 1) {
+        document.getElementById("uploadstatus").style.visibility = "hidden";
+    }
+}
+
+
+function addRow(item) {
+    let table = document.getElementById("downloadtable");
+    let row = table.insertRow(0);
+    item.Id = sanitizeId(item.Id);
+    row.id = "row-" + item.Id;
+    let cellFilename = row.insertCell(0);
+    let cellFileSize = row.insertCell(1);
+    let cellRemainingDownloads = row.insertCell(2);
+    let cellStoredUntil = row.insertCell(3);
+    let cellDownloadCount = row.insertCell(4);
+    let cellUrl = row.insertCell(5);
+    let cellButtons = row.insertCell(6);
+
+    cellFilename.innerText = item.Name;
+    cellFilename.id = "cell-name-" + item.Id;
+    cellDownloadCount.id = "cell-downloads-" + item.Id;
+    cellFileSize.innerText = item.Size;
+    if (item.UnlimitedDownloads) {
+        cellRemainingDownloads.innerText = "Unlimited";
+    } else {
+        cellRemainingDownloads.innerText = item.DownloadsRemaining;
+        cellRemainingDownloads.id = "cell-downloadsRemaining-" + item.Id;
+    }
+    if (item.UnlimitedTime) {
+        cellStoredUntil.innerText = "Unlimited";
+    } else {
+        cellStoredUntil.innerText = formatUnixTimestamp(item.ExpireAt);
+    }
+    cellDownloadCount.innerText = item.DownloadCount;
+
+    const link = document.createElement('a');
+    link.href = item.UrlDownload;
+    link.target = '_blank';
+    link.style.color = 'inherit';
+    link.id = 'url-href-' + item.Id;
+    link.textContent = item.Id;
+
+    cellUrl.appendChild(link);
+
+    if (item.IsPasswordProtected === true) {
+        const icon = document.createElement('i');
+        icon.className = 'bi bi-key';
+        icon.title = 'Password protected';
+        cellUrl.appendChild(document.createTextNode(' '));
+        cellUrl.appendChild(icon);
+    }
+
+    cellButtons.appendChild(createButtonGroup(item));
+
+
+    cellFilename.classList.add('newItem');
+    cellFileSize.classList.add('newItem');
+    cellRemainingDownloads.classList.add('newItem');
+    cellStoredUntil.classList.add('newItem');
+    cellDownloadCount.classList.add('newItem');
+    cellUrl.classList.add('newItem');
+    cellButtons.classList.add('newItem');
+    cellFileSize.setAttribute('data-order', item.SizeBytes);
+
+    changeRowCount(true, row);
+    return item.Id;
+}
+
+function createButtonGroup(item) {
+    const groupContainer = document.createElement("div");
+    groupContainer.className = "btn-toolbar justify-content-end";
+    groupContainer.setAttribute("role", "toolbar");
+
+    const group1 = document.createElement("div");
+    group1.className = "btn-group me-2";
+    group1.setAttribute("role", "group");
+
+    // === Button: Copy URL ===
+    const copyUrlBtn = document.createElement('button');
+    copyUrlBtn.type = 'button';
+    copyUrlBtn.className = 'copyurl btn btn-outline-light btn-sm';
+    copyUrlBtn.dataset.clipboardText = item.UrlDownload;
+    copyUrlBtn.id = 'url-button-' + item.Id;
+    copyUrlBtn.title = 'Copy URL';
+
+    const copyIcon = document.createElement('i');
+    copyIcon.className = 'bi bi-copy';
+    copyUrlBtn.appendChild(copyIcon);
+    copyUrlBtn.appendChild(document.createTextNode(' URL'));
+
+    copyUrlBtn.addEventListener('click', () => {
+        showToast(1000);
+    });
+
+    group1.appendChild(copyUrlBtn);
+
+    // Share button
+    const btnShare = document.createElement("button");
+    btnShare.type = "button";
+    btnShare.className = "btn btn-outline-light btn-sm";
+    btnShare.title = "Share";
+    btnShare.onclick = () => shareUrl(event, item.Id);
+    // For some reason bi-share does not always show up, using the svg fixes it 
+    btnShare.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi" viewBox="0 0 16 16">
+ 				 <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5m-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3"/>
+			</svg>`;
+    group1.appendChild(btnShare);
+
+
+    // Dropdown toggle 
+    const btnDropdown2 = document.createElement("button");
+    btnDropdown2.type = "button";
+    btnDropdown2.className = "btn btn-outline-light btn-sm dropdown-toggle dropdown-toggle-split";
+    btnDropdown2.setAttribute("data-bs-toggle", "dropdown");
+    btnDropdown2.setAttribute("aria-expanded", "false");
+    btnDropdown2.id = `shareDropdown-${item.Id}`;
+    
+    group1.appendChild(btnDropdown2);
+
+    const dropdown2 = document.createElement("ul");
+    dropdown2.className = "dropdown-menu dropdown-menu-end";
+    dropdown2.setAttribute("data-bs-theme", "dark");
+
+    const qrLi = document.createElement("li");
+    const qrA = document.createElement("a");
+    qrA.className = "dropdown-item";
+    qrA.id = `qrcode-${item.Id}`;
+    qrA.style.cursor = "pointer";
+    qrA.title = "Open QR Code";
+    qrA.onclick = () => showQrCode(item.Id);
+    qrA.innerHTML = `<i class="bi bi-qr-code"></i> QR Code`;
+    qrLi.appendChild(qrA);
+    dropdown2.appendChild(qrLi);
+
+    const emailLi = document.createElement("li");
+    const emailA = document.createElement("a");
+    emailA.className = "dropdown-item";
+    emailA.title = "Share via email";
+    emailA.id = `email-${item.Id}`;
+    emailA.target = "_blank";
+    emailA.href = `mailto:?body=${encodeURIComponent(item.UrlDownload)}`;
+    emailA.innerHTML = `<i class="bi bi-envelope"></i> Email`;
+    emailLi.appendChild(emailA);
+    dropdown2.appendChild(emailLi);
+    group1.appendChild(dropdown2);
+
+    // Button group for Download/Edit/Delete
+    const group2 = document.createElement("div");
+    group2.className = "btn-group";
+    group2.setAttribute("role", "group");
+    
+    
+    // === Button: Download ===
+    const btnDownload = document.createElement('button');
+    btnDownload.type = 'button';
+    btnDownload.className = 'btn btn-outline-light btn-sm';
+    btnDownload.title = 'Download';
+
+    const downloadIcon = document.createElement('i');
+    downloadIcon.className = 'bi bi-download';
+    btnDownload.appendChild(downloadIcon);
+
+    btnDownload.addEventListener('click', () => {
+        downloadFileWithPresign(item.Id);
+    });
+
+    group2.appendChild(btnDownload);
+
+    // === Button: Edit ===
+    const btnEdit = document.createElement('button');
+    btnEdit.type = 'button';
+    btnEdit.className = 'btn btn-outline-light btn-sm';
+    btnEdit.title = 'Edit';
+
+    const editIcon = document.createElement('i');
+    editIcon.className = 'bi bi-pencil';
+    btnEdit.appendChild(editIcon);
+
+    btnEdit.addEventListener('click', () => {
+        showEditModal(
+            item.Name,
+            item.Id,
+            item.DownloadsRemaining,
+            item.ExpireAt,
+            item.IsPasswordProtected,
+            item.UnlimitedDownloads,
+            item.UnlimitedTime,
+            canReplaceOwnFiles
+        );
+    });
+
+    group2.appendChild(btnEdit);
+
+    // === Button: Delete ===
+    const btnDelete = document.createElement('button');
+    btnDelete.type = 'button';
+    btnDelete.className = 'btn btn-outline-danger btn-sm';
+    btnDelete.title = 'Delete';
+    btnDelete.id = 'button-delete-' + item.Id;
+
+    const deleteIcon = document.createElement('i');
+    deleteIcon.className = 'bi bi-trash3';
+    btnDelete.appendChild(deleteIcon);
+
+    btnDelete.addEventListener('click', () => {
+        deleteFile(item.Id);
+    });
+    group2.appendChild(btnDelete);
+
+    groupContainer.appendChild(group1);
+    groupContainer.appendChild(group2);
+
+    return groupContainer;
+}
+
+function sanitizeId(str) {
+    return str.replace(/[^a-zA-Z0-9]/g, '');
+}
+
+function changeRowCount(add, row) {
+    let datatable = new DataTable.Api('#maintable');
+    if (rowCount == -1) {
+        rowCount = datatable.rows().count();
+    }
+    if (add) {
+        rowCount = rowCount + 1;
+        datatable.row.add(row);
+    } else {
+        rowCount = rowCount - 1;
+        row.classList.add("rowDeleting");
+        setTimeout(() => {
+            datatable.row(row).remove();
+            row.remove();
+        }, 290);
+    }
+
+    let infoEmpty = document.getElementsByClassName("dt-empty")[0];
+    if (typeof infoEmpty !== "undefined") {
+        infoEmpty.innerText = "Files stored: " + rowCount;
+    } else {
+        document.getElementsByClassName("dt-info")[0].innerText = "Files stored: " + rowCount;
+    }
+}
+
+
+function hideQrCode() {
+    document.getElementById("qroverlay").style.display = "none";
+    document.getElementById("qrcode").innerHTML = "";
+}
+
+// Shows the QR code the server generates for the file's download link
+function showQrCode(fileId) {
+    const overlay = document.getElementById("qroverlay");
+    apiFilesQr(fileId)
+        .then(blob => {
+            const image = document.createElement("img");
+            image.src = URL.createObjectURL(blob);
+            image.onload = () => URL.revokeObjectURL(image.src);
+            image.width = 200;
+            image.height = 200;
+            image.alt = "QR code";
+            document.getElementById("qrcode").replaceChildren(image);
+            overlay.style.display = "block";
+        })
+        .catch(error => {
+            alert("Unable to show QR code. Details are in the browser console.");
+            console.error('Error:', error);
+        });
+    overlay.addEventListener("click", hideQrCode);
+}
+
+
+function showToastFileDeletion(id) {
+    let notification = document.getElementById("toastnotificationUndo");
+    let filename = document.getElementById("cell-name-" + id).innerText;
+    let filenameToast = document.getElementById("toastFilename");
+    let button = document.getElementById("toastUndoButton");
+
+    filenameToast.innerText = filename;
+
+    button.dataset.fileid = id;
+    hideToast();
+    notification.classList.add("show");
+
+    clearTimeout(toastId);
+    toastId = setTimeout(() => {
+        hideFileToast();
+    }, 5000);
+}
+
+function hideFileToast() {
+    document.getElementById("toastnotificationUndo").classList.remove("show");
+}
+
+function handleUndo(button) {
+    hideFileToast();
+    apiFilesRestore(button.dataset.fileid)
+        .then(data => {
+            addRow(data.FileInfo);
+            notifyWorker({ type: "fileAdded", item: data.FileInfo });
+        })
+        .catch(error => {
+            alert("Unable to restore file. Details are in the browser console.");
+            console.error('Error:', error);
+        });
+}
+
+
+function shareUrl(event, id) {
+    if (!navigator.share) {
+         event.stopPropagation();
+    	 bootstrap.Dropdown.getOrCreateInstance(document.getElementById(`shareDropdown-${id}`)).toggle();
+        return;
+    }
+    let filename = document.getElementById("cell-name-" + id).innerText;
+    let url = document.getElementById("url-href-" + id).getAttribute("href");
+    navigator.share({
+        title: filename,
+        url: url,
+    })
+}
+

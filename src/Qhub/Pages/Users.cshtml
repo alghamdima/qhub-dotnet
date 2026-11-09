@@ -1,0 +1,255 @@
+@page "/users"
+@model UsersModel
+@using Qhub.Domain
+@* Legacy template html_users, markup unchanged; values in inline JS go through PageJs. *@
+@{
+    Layout = "_AdminLayout";
+    ViewData["ActiveView"] = 3;
+    ViewData["PageName"] = "OverviewUsers";
+    var me = Model.ActiveUser;
+}
+<div class="row">
+    <div class="col">
+        <div id="container" class="card" style="width: 80%">
+    <div class="card-body">
+		<div class="container">
+		  <div class="row mb-4">
+		    <div class="col">
+		    </div>
+		    <div class="col text-center">
+		      <h3 class="card-title mb-0">Users</h3>
+		    </div>
+		    <div class="col text-end">
+		      <button id="add-user-btn" class="btn btn-outline-light" onclick="showAddUserModal()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                </button>
+		    </div>
+		  </div>
+		</div>
+                <div class="table-responsive">
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th scope="col">User</th>
+                                <th scope="col">Group</th>
+            			<th scope="col">Last online</th>
+            			<th scope="col">Uploads</th>
+            			<th scope="col">Permissions
+                                    <button type="button"
+                                        class="btn btn-sm btn-link text-white-50 p-0 ms-1 align-baseline"
+                                        id="permLegendBtn"
+                                        data-bs-toggle="popover"
+                                        data-bs-placement="top"
+                                        data-bs-html="true"
+                                        data-bs-trigger="focus"
+                                        data-bs-content='
+                                            <table class="table table-sm table-dark mb-0" style="font-size:0.85em">
+                                              <tbody>
+                                                <tr><td><i class="bi bi-recycle"></i></td><td>Replace own uploads</td></tr>
+                                                <tr><td><i class="bi bi-eye"></i></td><td>List other uploads</td></tr>
+                                                <tr><td><i class="bi bi-pencil"></i></td><td>Edit other uploads</td></tr>
+                                                <tr><td><i class="bi bi-trash3"></i></td><td>Delete other uploads</td></tr>
+                                                <tr><td><i class="bi bi-arrow-left-right"></i></td><td>Replace other uploads</td></tr>
+                                                <tr><td><i class="bi bi-card-list"></i></td><td>Manage system logs</td></tr>
+                                                <tr><td><i class="bi bi-people"></i></td><td>Manage users</td></tr>
+                                                <tr><td><i class="bi bi-sliders2"></i></td><td>Manage all API keys</td></tr>
+                                              </tbody>
+                                            </table>'
+                                        title="Permission Legend"
+                                        tabindex="0"
+                                        aria-label="Show permission legend">
+                                        <i class="bi bi-question-circle"></i>
+                                    </button>
+                                </th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usertable">
+@foreach (var row in Model.Users)
+{
+    var u = row.User;
+    var id = u.Id;
+    var locked = u.Rank == UserRank.SuperAdmin || u.Id == me.Id;
+                            <tr id="row-@id">
+                                <td>@u.Name</td>
+                                <td  id="userlevel_@id">@UsersModel.Level(u)</td>
+            			<td><span id="cell-lastonline-@id"></span></td>
+				   <script>insertLastOnlineDate(@(u.LastOnline?.ToUnixTimeSeconds() ?? 0), "cell-lastonline-@id");</script>
+                                <td>@row.UploadCount</td>
+            			<td class="prevent-select">
+		<i id="perm_replace_@id" class="bi bi-recycle @Model.State(u, UserPermissions.Replace)" title="Replace own uploads" onclick='changeUserPermission("@id","PERM_REPLACE", "perm_replace_@id");'></i>
+		<i id="perm_list_@id" class="bi bi-eye @Model.State(u, UserPermissions.List)" title="List other uploads" onclick='changeUserPermission("@id","PERM_LIST", "perm_list_@id");'></i>
+		<i id="perm_edit_@id" class="bi bi-pencil @Model.State(u, UserPermissions.Edit)" title="Edit other uploads" onclick='changeUserPermission("@id","PERM_EDIT", "perm_edit_@id");'></i>
+		<i id="perm_delete_@id" class="bi bi-trash3 @Model.State(u, UserPermissions.Delete)" title="Delete other uploads" onclick='changeUserPermission("@id","PERM_DELETE", "perm_delete_@id");'></i>
+		<i id="perm_replace_other_@id" class="bi bi-arrow-left-right @Model.State(u, UserPermissions.ReplaceOther)" title="Replace other uploads" onclick='changeUserPermission("@id","PERM_REPLACE_OTHER", "perm_replace_other_@id");'></i>
+		<i id="perm_logs_@id" class="bi bi-card-list @Model.State(u, UserPermissions.Logs)" title="Manage system logs" onclick='changeUserPermission("@id","PERM_LOGS", "perm_logs_@id");'></i>
+		<i id="perm_users_@id" class="bi bi-people @Model.State(u, UserPermissions.Users)" title="Manage users" onclick='changeUserPermission("@id","PERM_USERS", "perm_users_@id");'></i>
+		<i id="perm_api_@id" class="bi bi-sliders2 @Model.State(u, UserPermissions.Api)" title="Manage all API keys" onclick='changeUserPermission("@id","PERM_API", "perm_api_@id");'></i>
+            			</td>
+                                <td>
+			        <div class="btn-group" role="group">
+    @if (Model.IsInternalAuth)
+    {
+                                <button id="pwchange-@id" type="button" class="btn btn-outline-light btn-sm" disabled="@locked" onclick="showResetPwModal('@id', '@PageJs.Str(u.Name)')" title="Reset Password"><i class="bi bi-key-fill"></i></button>
+    }
+    @if (u.Rank is not (UserRank.SuperAdmin or UserRank.Admin))
+    {
+		                        <button id="changeRank_@id" type="button" onclick="changeRank(@id, 'ADMIN', 'changeRank_@id')" title="Promote User" disabled="@(u.Id == me.Id || !Model.IsAdmin)" class="btn btn-outline-light btn-sm">
+		                        	<i class="bi bi-chevron-double-up"></i></button>
+    }
+    else
+    {
+                       			 <button id="changeRank_@id" type="button" onclick="changeRank(@id, 'USER', 'changeRank_@id')" disabled="@locked" title="Demote User" class="btn btn-outline-light btn-sm">
+		                        	<i class="bi bi-chevron-double-down"></i></button>
+    }
+                                <button id="delete-@id" type="button" class="btn btn-outline-danger btn-sm" disabled="@locked" onclick="showDeleteUserModal('@id', '@PageJs.Str(u.Name)')" title="Delete"><i class="bi bi-trash3"></i></button>
+                                </div></td>
+                            </tr>
+}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+	<div id="toastnotification" class="toastnotification" data-default="Invalid notification">Toast Text</div>
+
+	<!-- Modal for deletion confirmation -->
+	<div class="modal" tabindex="-1" id="deleteModal">
+	  <div class="modal-dialog qhub-dialog">
+	    <div class="modal-content qhub-dialog">
+	      <div class="modal-header">
+		<h5 class="modal-title">Delete User</h5>
+	      </div>
+	      <div class="modal-body">
+		<p>Are you sure you want to delete user <span id="deleteModalBody" class="fw-bold"></span>?
+		This action cannot be undone.</p>
+		<div class="form-check form-check-inline">
+@if (Model.Has(UserPermissions.Delete))
+{
+		  <input class="form-check-input" type="checkbox"  id="checkboxDelete" value="">
+}
+else
+{
+		  <input class="form-check-input" type="checkbox"  id="checkboxDelete" value="" disabled title="Needs the permission to delete other users' uploads">
+}
+		  <label class="form-check-label" for="checkboxDelete">
+		    Permanently delete all files uploaded by this user.
+		  </label>
+		</div>
+		</div>
+	      <div class="modal-footer">
+		<button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+		<button type="button" id="buttonDelete" class="btn btn-danger">Delete User</button>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+
+
+
+	<!-- Bootstrap Modal for Adding a New User -->
+	<div class="modal fade" id="newUserModal" tabindex="-1" aria-labelledby="newUserModalLabel" aria-hidden="true">
+	  <div class="modal-dialog qhub-dialog">
+	    <div class="modal-content qhub-dialog">
+	      <div class="modal-header">
+		<h5 class="modal-title" id="newUserModalLabel">Create New User</h5>
+	      </div>
+	      <div class="modal-body">
+		<form id="newUserForm">
+		  <div class="mb-3">
+		  <div class="text-start">
+		    <label for="e_userName" class="form-label">Username</label>
+		    </div>
+		    <input type="text" class="form-control" id="e_userName" minlength="2" placeholder="Enter a username" required>
+	         </div>
+		</form>
+	      <div class="modal-footer">
+		<button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+		<button type="submit" form="newUserForm" onclick="addNewUser();" id="mb_addUser" class="btn btn-primary">Add User</button>
+	      </div>
+	    </div>
+	  </div>
+	  </div>
+	  </div>
+
+
+	<!-- Modal for Reset Password -->
+	<div class="modal  fade" id="resetPasswordModal" tabindex="-1" aria-labelledby="resetPasswordModalLabel" aria-hidden="true">
+	  <div class="modal-dialog qhub-dialog text-start">
+	    <div class="modal-content qhub-dialog">
+	      <!-- Modal Header -->
+	      <div class="modal-header">
+		<h5 class="modal-title" id="resetPasswordModalLabel">Reset Password</h5>
+	      </div>
+
+	      <!-- Modal Body -->
+	      <div class="modal-body">
+
+		<div id="formentryReset">
+		<p>Choose an option to reset the password for the user <span  class="fw-bold" id="l_userpwreset"></span>:</p>
+
+		<!-- Option 1: Force user to set a new password on next login -->
+		<div class="form-check mb-3">
+		  <input
+		    type="radio"
+		    id="forceNewPassword"
+		    name="resetOption"
+		    class="form-check-input"
+		    value="forceNew"
+		    checked>
+		  <label for="forceNewPassword" class="form-check-label">
+		    Force user to set a new password on next login
+		  </label>
+		</div>
+
+		<!-- Option 2: Generate and display a random password -->
+		<div class="form-check mb-3">
+		  <input
+		    type="radio"
+		    id="generateRandomPassword"
+		    name="resetOption"
+		    class="form-check-input"
+		    value="generateRandom">
+		  <label for="generateRandomPassword" class="form-check-label">
+		    Generate a new random password (user will be forced to change it on next login)
+		  </label>
+		</div>
+
+
+		</div>
+
+		 <!-- Display Random Password (Inline) -->
+		<div id="randomPasswordContainer" class="mt-3" style="display: none;">
+		  <label class="form-label">
+		    New Password:
+		    <span class="highlighted-password" id="l_returnedPw"></span> <button type="button" id="copypwclip" title="Copy Password" class="copyurl btn btn-outline-light btn-sm"><i class="bi bi-copy"></i></button>
+		  </label>
+		</div>
+	      </div>
+	      <!-- Modal Footer -->
+	      <div class="modal-footer">
+		<button type="button" id="cancelPasswordButton"class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+		<button type="button" id="resetPasswordButton" class="btn btn-primary">Confirm</button>
+		<button type="button" style="display:none" id="closeModalResetPw" class="btn btn-primary" data-bs-dismiss="modal" >OK</button>
+	      </div>
+	    </div>
+	  </div>
+	  </div>
+
+
+    </div>
+</div>
+
+<script src="./js/min/admin.min.qhubnet1.js"></script>
+<script>
+	var isInternalAuth = @PageJs.Bool(Model.IsInternalAuth);
+	var isAdmin = @PageJs.Bool(Model.IsAdmin);
+	var userPermissions = @((int)me.Permissions);
+
+	(function () {
+		var el = document.getElementById('permLegendBtn');
+		if (el) {
+			new bootstrap.Popover(el, { sanitize: false });
+		}
+	})();
+</script>

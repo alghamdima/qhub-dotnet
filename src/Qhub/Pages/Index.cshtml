@@ -1,0 +1,12 @@
+@page "/index"
+@inject Microsoft.Extensions.Options.IOptions<Qhub.Configuration.QhubOptions> Options
+@* Legacy template html_index: forwards to QHUB_REDIRECT_URL, or to the login page. *@
+@{
+    Layout = null;
+    if (Options.Value.RedirectUrl.Length == 0)
+    {
+        Response.Redirect("./login");
+        return;
+    }
+}
+<html lang="en" dir="ltr"><head><meta name="robots" content="noindex"><meta http-equiv="Refresh" content="0; URL=@Options.Value.RedirectUrl"></head></html>

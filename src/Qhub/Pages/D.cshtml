@@ -1,0 +1,96 @@
+@page "/d"
+@model DModel
+@* Legacy templates html_download_password and html_download, markup unchanged except the antiforgery token. *@
+@{
+    var t = Model.Customer.T;
+    var publicName = ViewData["PublicName"];
+    var baseUrl = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<Qhub.Configuration.QhubOptions>>().Value.PublicUrl;
+}
+@section Head {
+@if (Model.IsPasswordView)
+{
+          <title>@publicName: Password required</title>
+	  <meta name="title" content="@publicName">
+    	  <meta name="description" content="Password required">
+    	  <meta property="og:title" content="@publicName"/>
+  	  <meta property="og:description" content="Password required"/>
+}
+else
+{
+          <title>@publicName: @Model.Link.FileName</title>
+	  <meta name="title" content="@publicName: @Model.Link.FileName">
+    	  <meta name="description" content="@Model.Size">
+    	  <meta property="og:title" content="@Model.Link.FileName"/>
+  	  <meta property="og:description" content="@Model.Size"/>
+}
+  	  <meta property="og:url" content="@baseUrl"/>
+}
+@if (Model.IsPasswordView)
+{
+    ViewData["PageName"] = "PublicDownloadPw";
+      <div class="row" lang="@Model.Customer.Lang" dir="@Model.Customer.Dir">
+        <div class="col">
+		<div class="card" style="width: 18rem;">
+		  <div class="card-body">
+		    <h4 class="card-title">@t["codeTitle"]</h4>
+@if (Model.IsLocked)
+{
+			<div class="alert alert-danger mt-3 mb-0" role="alert">@t["codeLocked"]</div>
+}
+else
+{
+			<p class="mt-3">@t["codePrompt"]</p>
+			<form method="post" action="./d?id=@Model.Link.Id" id="form" name="form" onSubmit="submitForm()" asp-antiforgery="true">
+			  <input type="password" inputmode="numeric" autocomplete="off" class="form-control" id="passwordFile" placeholder="@t["codePlaceholder"]" aria-label="@t["codePlaceholder"]" required>
+			  <input type="hidden" id="pw_hidden" name="password">
+@if (Model.IsFailedLogin)
+{
+			  <div class="text-danger mt-2" role="alert">@t["codeWrong"] @Model.AttemptsLeft</div>
+}
+			  <button type="submit" id="submitbutton" class="btn btn-outline-light mt-3">@t["codeSubmit"]</button>
+			</form>
+}
+		  </div>
+		</div>
+	    </div>
+    </div>
+
+<script>
+function submitForm(){
+	document.getElementById("passwordFile").disabled = true;
+	document.getElementById("pw_hidden").value = document.getElementById("passwordFile").value;
+	document.getElementById("submitbutton").disabled = true;
+	return true;
+}
+</script>
+}
+else
+{
+    ViewData["PageName"] = "PublicDownload";
+<div class="container-fluid download-wrapper p-4" lang="@Model.Customer.Lang" dir="@Model.Customer.Dir">
+    <div class="file-card card">
+        <div class="card-body p-5 text-center">
+
+            <div class="icon-container">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" class="bi bi-file-earmark-code-fill" viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0zM9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1z"/>
+                </svg>
+            </div>
+
+            <h4 id="filename" class="card-title filename-text mb-4">@Model.Link.FileName</h4>
+
+            <ul class="list-group mb-4">
+                <li class="list-group-item d-flex justify-content-between align-items-center dark-list-item">
+                    <span>@t["size"]</span>
+                    <span class="text-white fw-bold" dir="ltr">@Model.Size</span>
+                </li>
+            </ul>
+
+            <div class="d-grid gap-2">
+                <a class="btn btn-primary btn-lg" href="./downloadFile?id=@Model.Link.Id">@t["download"]</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+}

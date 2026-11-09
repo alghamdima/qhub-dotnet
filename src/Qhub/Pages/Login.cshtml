@@ -1,0 +1,79 @@
+@page "/login"
+@model LoginModel
+@* Legacy template html_login; the hidden csrf-token field is replaced by the antiforgery token. *@
+@{ ViewData["PageName"] = "Login"; }
+@section Head {
+         <title>@ViewData["PublicName"]</title>
+}
+      <div class="row">
+        <div class="col">
+		<div id="container" class="card" style="width: 20em">
+		  <div class="card-body">
+		    <h1 class="card-title">Login</h1>
+		    <br>
+@if (Model.SamlLogin)
+{
+		    <a href="./saml-login" id="ssobutton" class="btn btn-primary w-100 mx-auto" style="max-width: 300px;">Log in with single sign-on</a>
+}
+@if (Model.SamlLogin && Model.InternalLogin)
+{
+		    <p class="text-secondary my-3">or</p>
+}
+@if (Model.InternalLogin)
+{
+		    <p class="card-text">
+			<form method="post" action="./login" id="form" name="form" onSubmit="submitForm()" asp-antiforgery="true">
+			    <div class="mb-3">
+				<input type="text" class="form-control mx-auto" style="max-width: 300px;"
+				       autocomplete="username" placeholder="Username" value="@Model.UserName" id="username">
+				<input type="hidden" id="uname_hidden" name="username">
+			    </div>
+
+			    <div class="mb-3">
+				<input type="password" class="form-control mx-auto" style="max-width: 300px;"
+				       autocomplete="current-password" placeholder="Password" id="password">
+				<input type="hidden" id="pw_hidden" name="password">
+			    </div>
+
+@if (Model.IsFailedLogin)
+{
+    if (Model.IsFailedCsrf)
+    {
+			    <div class="mb-3">
+				<span class="text-danger">The login page was open too long and expired. Please try again.</span>
+			    </div>
+    }
+    else
+    {
+			    <div class="mb-3">
+				<span class="text-danger">Incorrect username or password!</span>
+			    </div>
+    }
+}
+
+			    <div class="mt-4">
+				<button type="submit" id="submitbutton" class="btn btn-primary w-100 mx-auto" style="max-width: 300px;">
+				    Login
+				</button>
+			    </div>
+			</form>
+			<br><br>
+			<a href="./forgotpw">Forgot password</a></p>
+}
+		  </div>
+		</div>
+	    </div>
+   	 </div>
+@if (Model.InternalLogin)
+{
+<script>
+function submitForm(){
+	document.getElementById("username").disabled = true;
+	document.getElementById("password").disabled = true;
+	document.getElementById("uname_hidden").value = document.getElementById("username").value;
+	document.getElementById("pw_hidden").value = document.getElementById("password").value;
+	document.getElementById("submitbutton").disabled = true;
+	return true;
+}
+</script>
+}

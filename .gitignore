@@ -1,0 +1,13 @@
+bin/
+obj/
+TestResults/
+*.user
+.vs/
+
+# Local deployment secrets and settings (see .env.example and deploy/make-secrets.sh)
+.env
+deploy/secrets/
+
+# End-to-end scenario
+e2e/node_modules/
+e2e/out/

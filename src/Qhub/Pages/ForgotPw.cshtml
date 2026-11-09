@@ -1,0 +1,23 @@
+@page "/forgotpw"
+@inject Microsoft.Extensions.Options.IOptions<Qhub.Configuration.QhubOptions> Options
+@* Legacy template html_forgotpw, markup unchanged. *@
+@{
+    ViewData["PublicName"] = Options.Value.PublicName;
+    ViewData["PageName"] = "ForgotPw";
+}
+@section Head {
+         <title>@Options.Value.PublicName</title>
+}
+      <div class="row">
+        <div class="col">
+		<div id="container" class="card" style="width: 35em">
+		  <div class="card-body">
+		    <h3 class="card-title">Forgot password</h3>
+		    <br>
+		    <p class="card-text">
+			If you forgot your user password, please ask your administrator to reset it.<br><br>To reset an administrator password, change <code class="text-nowrap">secrets/admin_password</code> (or <code class="text-nowrap">QHUB_ADMIN_PASSWORD</code>) and restart Qhub.
+		    </p><br>
+		  </div>
+		</div>
+	    </div>
+   	 </div>
